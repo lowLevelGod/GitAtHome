@@ -2,3 +2,5 @@
 gitathome
 .vs*
 .gitAt*
+node*
+*.json
