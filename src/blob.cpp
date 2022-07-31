@@ -1,6 +1,7 @@
 #include <../headers/blob.hpp>
 #include <iostream>
 #include <iterator>
+#include <../headers/git.hpp>
 
 const std::string Blob::getHeader(const size_t len)
 {
@@ -46,59 +47,21 @@ void Blob::serialize()
 
 Blob::Blob(const std::string& fileName)
 {
-    std::ifstream file(fileName, std::ios::binary);
-
-    file.unsetf(std::ios::skipws); // for newlines
-
-    // get file size
-    std::streampos fileSize;
-
-    file.seekg(0, std::ios::end);
-    fileSize = file.tellg();
-    file.seekg(0, std::ios::beg);
-    // std::cout << fileSize << std::endl;
-    std::string header = getHeader(fileSize);
-
-    content.reserve(fileSize);
-
-    content.insert(content.begin(),
-               std::istream_iterator<char>(file),
-               std::istream_iterator<char>());
-    // std::cerr << "Error: " << strerror(errno);
-    file.close();
-    if (!file)
-        std::cout << "Read failed!" << std::endl; // Prints it every time for some reason
+    // read file content
+    content = Git::readBinaryFile(fileName);
+    // create header
+    std::string header = getHeader(content.size());
 
     // compute SHA1 hash of header + content 
     std::vector<char> hashedContent(header.begin(), header.end());
-
-    char hex[SHA1_HEX_SIZE]; // temporary buffer for sha1 hash
     hashedContent.insert(hashedContent.end(), content.begin(), content.end());
-        sha1(hashedContent.data())
-        // finalize must be called, otherwise the hash is not valid
-        // after that, no more bytes should be added
-        .finalize()
-        // print the hash in hexadecimal, 0-terminated
-        .print_hex(hex);
-    hash.assign(hex);
-
+    hash.assign(Git::getSHA1hash(hashedContent));
 }
 
 void Blob::print()
 {
-    std::ifstream file(getPath(), std::ios::binary);
-
-    // get file size
-    std::streampos fileSize;
-
-    file.seekg(0, std::ios::end);
-    fileSize = file.tellg();
-    file.seekg(0, std::ios::beg);
-
-    std::vector<char> compressed(fileSize);
-    compressed.insert(compressed.begin(),
-               std::istream_iterator<char>(file),
-               std::istream_iterator<char>());// read compressed blob from objects
+    // read compressed blob from objects
+    std::vector<char> compressed(Git::readBinaryFile(getPath()));
 
     uLong ucompSize = getHeader(content.size()).length() + content.size() + 1;
     uLong compSize = compressBound(ucompSize);

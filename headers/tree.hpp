@@ -9,8 +9,9 @@ class Tree : public Object
         private:
             uint64_t mode;
             std::string fileName;
-            std::shared_ptr<Object> object;
-            const std::string& getTreeEntryString();
+            std::string hash;
+        public:
+            const std::vector<char> getTreeEntryString();
     };
 
     private:
@@ -18,5 +19,6 @@ class Tree : public Object
         void serialize() override;
     public:
         void print() override;
+        Tree(const std::vector<TreeEntry>&);
         ~Tree() override = default;
 };

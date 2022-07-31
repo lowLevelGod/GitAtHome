@@ -8,4 +8,4 @@ OTHER_HEADERS_PATH = /usr/include
 .PHONY: all
 
 all:
-	g++ -B$(COMPILER_BINS) $(GCC_FLAGS) -I$(HEADERS_PATH) -I$(OTHER_HEADERS_PATH) $(C_SOURCES) -o gitathome
+	g++ -o gitathome $(C_SOURCES) -B$(COMPILER_BINS) $(GCC_FLAGS) -I$(HEADERS_PATH) -I$(OTHER_HEADERS_PATH)

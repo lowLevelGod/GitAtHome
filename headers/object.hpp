@@ -3,7 +3,6 @@
 #include <fstream>
 #include <zlib.h>
 #include <vector>
-#include <sha1.hpp>
 
 class Object
 {
