@@ -1,15 +1,11 @@
 #include <../headers/tree.hpp>
+#include <../headers/git.hpp>
 #include <iostream>
+#include <algorithm>
 
-const std::string getHeader(const size_t len)
+const std::string Tree::getHeader(const size_t len)
 {
-    std::string result = "";
-    result += "tree";
-    result += " ";
-    result += std::to_string(len);
-    result += "\0";
-
-    return result;
+    return "tree" + Object::getHeader(len);
 }
 
 const std::vector<char> Tree::TreeEntry::getTreeEntryString()
@@ -45,43 +41,39 @@ const std::vector<char> Tree::TreeEntry::getTreeEntryString()
     return result;
 }
 
-Tree::Tree(const std::vector<TreeEntry>& entries)
-{
+Tree::Tree(std::vector<TreeEntry>& entries)
+{   
+    // sort tree entries after file name/folder name
+    std::sort(entries.begin(), entries.end(), []
+    (const TreeEntry& first, const TreeEntry& second){
+        return first.getFileName() < second.getFileName();
+    });
+
+    std::vector<char> result;
     for (auto e : entries)
     {
         std::vector<char> entryString = e.getTreeEntryString();
         content.insert(content.end(), entryString.begin(), entryString.end());
     }
+    std::string header = getHeader(content.size());
+    result.assign(header.begin(), header.end());
+    result.insert(result.end(), content.begin(), content.end());
+
+    hash.assign(Git::getSHA1hash(result));
 }
 
 
-void Tree::serialize()
+void Tree::serialize(const std::string& t = "")
 {
     std::string header = getHeader(content.size());
-    // append blob content to header
-    std::vector<char> result(header.begin(), header.end());
-    result.insert(result.end(), content.begin(), content.end());
+    Object::serialize(header);
+}
 
-    uLong ucompSize = result.size() + 1;
-    uLong compSize = compressBound(ucompSize);
-    std::vector<char> compressedResult(compSize); // allocate enough size for output buffer
-    // Deflate
-    try
-    {
-        compress((Bytef *)compressedResult.data(), &compSize, (Bytef *)result.data(), ucompSize);
-    }
-    catch(const std::exception& e)
-    {
-        // std::cerr << e.what() << '\n';
-        std::cout << "Compression failed!" << std::endl;
-    }
-    //resize vector to actual size of compressed data
-    compressedResult.resize(compSize);
-    std::ofstream file(getPath(), std::ios::binary);
-   
-    file.write(compressedResult.data(), compressedResult.size());
-    
-    file.close();
-    if (!file)
-        std::cout << "Write failed!" << std::endl;
+void Tree::print()
+{
+    std::vector<char> decompressedResult = Git::decompressObject(getPath() ,
+                                                                getHeader(content.size()).length() + content.size() + 1);
+    for (auto x : decompressedResult)
+        std::cout << x;
+    // std::cout << std::endl;
 }

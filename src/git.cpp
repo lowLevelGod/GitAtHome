@@ -11,12 +11,16 @@ void Git::init()
 {
     mkdir("./.gitAtHome", 0777);
     mkdir("./.gitAtHome/objects", 0777);
+    mkdir("./.gitAtHome/refs", 0777);
 }  
 
 const std::string Git::getSHA1hash(const std::vector<char>& content)
 {
+    std::string tmp;
+    tmp.assign(content.begin(), content.end());
+
     char hex[SHA1_HEX_SIZE]; // temporary buffer for sha1 hash
-    sha1(content.data())
+    sha1(tmp.c_str())
     // finalize must be called, otherwise the hash is not valid
     // after that, no more bytes should be added
     .finalize()
@@ -52,10 +56,32 @@ const std::vector<char> Git::readBinaryFile(const std::string& fileName)
     return result;
 }
 
+const std::vector<char> Git::decompressObject(const std::string& fileName, const size_t len)
+{
+    // read compressed blob from objects
+    std::vector<char> compressed(Git::readBinaryFile(fileName));
+
+    uLong ucompSize = len;
+    uLong compSize = compressBound(ucompSize);
+    std::vector<char> decompressedResult(ucompSize); // allocate enough size for output buffer
+    // Inflate
+    try
+    {
+        uncompress((Bytef *)decompressedResult.data(), &ucompSize, (Bytef *)compressed.data(), compSize);
+    }
+    catch(const std::exception& e)
+    {
+        // std::cerr << e.what() << '\n';
+        std::cout << "Decompression failed!" << std::endl;
+    }
+    
+    return decompressedResult;
+}
+
 void Git::run()
 {
     init();
-    Blob blob("test3.txt");
-    blob.serialize();
-    blob.print();
+    Blob blob1("test3.txt");
+    blob1.serialize("");
+    blob1.print();
 }

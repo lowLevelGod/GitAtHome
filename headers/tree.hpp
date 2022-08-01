@@ -12,13 +12,14 @@ class Tree : public Object
             std::string hash;
         public:
             const std::vector<char> getTreeEntryString();
+            const std::string& getFileName() const{ return fileName;}
     };
 
     private:
         const std::string getHeader(const size_t) override;
-        void serialize() override;
+        void serialize(const std::string&) override;
     public:
         void print() override;
-        Tree(const std::vector<TreeEntry>&);
+        Tree(std::vector<TreeEntry>&);
         ~Tree() override = default;
 };
