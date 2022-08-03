@@ -2,7 +2,7 @@
 #include <../headers/git.hpp>
 #include <iostream>
 
-const std::string Commit::getHeader(const size_t len)
+const std::string Commit::getHeader(const size_t len) const
 {
     return "commit" + Object::getHeader(len);;
 }
@@ -32,19 +32,22 @@ Commit::Commit(const Tree& tree, const CommitMessage& cm, const std::vector<std:
     result.assign(resultString.begin(), resultString.end());
     
     hash.assign(Git::getSHA1hash(result));
+
+    tree.serialize("");
+    tree.print();
 }
 
-void Commit::serialize(const std::string& t = "")
+void Commit::serialize(const std::string& t = "") const
 {
     std::string header = getHeader(content.size());
     this->Object::serialize(header);
 }
 
-void Commit::print()
+void Commit::print() const
 {
     std::vector<char> decompressedResult = Git::decompressObject(getPath() ,
                                                                 getHeader(content.size()).length() + content.size() + 1);
     for (auto x : decompressedResult)
         std::cout << x;
-    // std::cout << std::endl;
+    std::cout << std::endl;
 }

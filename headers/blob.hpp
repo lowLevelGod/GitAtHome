@@ -4,10 +4,10 @@
 class Blob : public Object
 {
     private:
-        const std::string getHeader(const size_t) override;
+        const std::string getHeader(const size_t) const override;
     public:
-        void serialize(const std::string&) override;
-        void print() override;
+        void serialize(const std::string&) const override;
+        void print() const override;
         Blob(const std::string&);
         ~Blob() override = default;
 };

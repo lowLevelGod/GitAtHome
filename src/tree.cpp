@@ -3,12 +3,12 @@
 #include <iostream>
 #include <algorithm>
 
-const std::string Tree::getHeader(const size_t len)
+const std::string Tree::getHeader(const size_t len) const
 {
     return "tree" + Object::getHeader(len);
 }
 
-const std::vector<char> Tree::TreeEntry::getTreeEntryString()
+const std::vector<char> TreeEntry::getTreeEntryString()
 {
     std::string prefix = "";
     prefix += std::to_string(mode);
@@ -41,6 +41,12 @@ const std::vector<char> Tree::TreeEntry::getTreeEntryString()
     return result;
 }
 
+TreeEntry::TreeEntry(uint64_t mode, const std::string& fileName, const Object& obj) : mode{mode}, fileName{fileName} 
+{
+    obj.serialize("");
+    hash = obj.getHash();
+}
+
 Tree::Tree(std::vector<TreeEntry>& entries)
 {   
     // sort tree entries after file name/folder name
@@ -63,17 +69,17 @@ Tree::Tree(std::vector<TreeEntry>& entries)
 }
 
 
-void Tree::serialize(const std::string& t = "")
+void Tree::serialize(const std::string& t = "") const
 {
     std::string header = getHeader(content.size());
     Object::serialize(header);
 }
 
-void Tree::print()
+void Tree::print() const
 {
     std::vector<char> decompressedResult = Git::decompressObject(getPath() ,
                                                                 getHeader(content.size()).length() + content.size() + 1);
     for (auto x : decompressedResult)
         std::cout << x;
-    // std::cout << std::endl;
+    std::cout << std::endl;
 }

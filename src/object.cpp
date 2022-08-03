@@ -3,7 +3,7 @@
 #include <sys/types.h>
 #include <iostream>
 
-const std::string Object::getPath()
+const std::string Object::getPath() const
 {
     std::string pathDir = "./.gitAtHome/objects/" + hash.substr(0, 2);
 
@@ -16,7 +16,7 @@ const std::string Object::getPath()
     return "./.gitAtHome/objects/" + hash.substr(0, 2) + "/" + hash.substr(2);
 }
 
-const std::string Object::getHeader(const size_t len)
+const std::string Object::getHeader(const size_t len) const
 {
     std::string result = "";
     result += " ";
@@ -26,7 +26,7 @@ const std::string Object::getHeader(const size_t len)
     return result;
 }
 
-void Object::serialize(const std::string& header)
+void Object::serialize(const std::string& header) const
 {
     // append blob content to header
     std::vector<char> result(header.begin(), header.end());
