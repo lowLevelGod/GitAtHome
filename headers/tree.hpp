@@ -6,13 +6,13 @@
 class TreeEntry
 {
     private:
-        uint64_t mode;
+        std::string mode;
         std::string fileName;
         std::string hash;
     public:
         const std::vector<char> getTreeEntryString();
         const std::string& getFileName() const{ return fileName;}
-        TreeEntry(uint64_t, const std::string&, const Object&);
+        TreeEntry(const std::string&, const Object&);
 };
 
 class Tree : public Object

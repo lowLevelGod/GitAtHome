@@ -12,7 +12,7 @@ class Commit : public Object
     public:
         void serialize(const std::string&) const override;
         void print() const override;
-        Commit(const Tree&, const CommitMessage&, const std::vector<std::shared_ptr<Commit>>&);
+        Commit(const Tree&, const CommitMessage&, const std::vector<std::string>&);
         ~Commit() override = default;
 };
 

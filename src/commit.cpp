@@ -1,5 +1,5 @@
 #include <../headers/commit.hpp>
-#include <../headers/git.hpp>
+#include <../headers/utils.hpp>
 #include <iostream>
 
 const std::string Commit::getHeader(const size_t len) const
@@ -7,7 +7,7 @@ const std::string Commit::getHeader(const size_t len) const
     return "commit" + Object::getHeader(len);;
 }
 
-Commit::Commit(const Tree& tree, const CommitMessage& cm, const std::vector<std::shared_ptr<Commit>>& parents)
+Commit::Commit(const Tree& tree, const CommitMessage& cm, const std::vector<std::string>& parents)
 {
     //tree {tree_sha1}
     std::string treeString = "tree " + tree.getHash();
@@ -15,7 +15,7 @@ Commit::Commit(const Tree& tree, const CommitMessage& cm, const std::vector<std:
     //parent {parent_sha1} for each entry
     std::string parentString = "";
     for (auto p : parents)
-        parentString += "parent " + p->getHash();
+        parentString += "parent " + p;
 
     //author {author_name} <{author_email}> {author_date_seconds} {author_date_timezone}
     std::string authorString = "author " + cm.author;
@@ -31,7 +31,7 @@ Commit::Commit(const Tree& tree, const CommitMessage& cm, const std::vector<std:
     std::vector<char> result;
     result.assign(resultString.begin(), resultString.end());
     
-    hash.assign(Git::getSHA1hash(result));
+    hash.assign(Utils::getSHA1hash(result));
 
     tree.serialize("");
     tree.print();
@@ -45,7 +45,7 @@ void Commit::serialize(const std::string& t = "") const
 
 void Commit::print() const
 {
-    std::vector<char> decompressedResult = Git::decompressObject(getPath() ,
+    std::vector<char> decompressedResult = Utils::decompressObject(getPath() ,
                                                                 getHeader(content.size()).length() + content.size() + 1);
     for (auto x : decompressedResult)
         std::cout << x;

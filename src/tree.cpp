@@ -1,5 +1,5 @@
 #include <../headers/tree.hpp>
-#include <../headers/git.hpp>
+#include <../headers/utils.hpp>
 #include <iostream>
 #include <algorithm>
 
@@ -11,7 +11,7 @@ const std::string Tree::getHeader(const size_t len) const
 const std::vector<char> TreeEntry::getTreeEntryString()
 {
     std::string prefix = "";
-    prefix += std::to_string(mode);
+    prefix += mode;
     prefix += fileName;
     prefix += "\0";
 
@@ -41,8 +41,9 @@ const std::vector<char> TreeEntry::getTreeEntryString()
     return result;
 }
 
-TreeEntry::TreeEntry(uint64_t mode, const std::string& fileName, const Object& obj) : mode{mode}, fileName{fileName} 
+TreeEntry::TreeEntry(const std::string& fileName, const Object& obj) : fileName{fileName} 
 {
+    mode = Utils::getMode(fileName);
     obj.serialize("");
     hash = obj.getHash();
 }
@@ -65,7 +66,7 @@ Tree::Tree(std::vector<TreeEntry>& entries)
     result.assign(header.begin(), header.end());
     result.insert(result.end(), content.begin(), content.end());
 
-    hash.assign(Git::getSHA1hash(result));
+    hash.assign(Utils::getSHA1hash(result));
 }
 
 
@@ -77,7 +78,7 @@ void Tree::serialize(const std::string& t = "") const
 
 void Tree::print() const
 {
-    std::vector<char> decompressedResult = Git::decompressObject(getPath() ,
+    std::vector<char> decompressedResult = Utils::decompressObject(getPath() ,
                                                                 getHeader(content.size()).length() + content.size() + 1);
     for (auto x : decompressedResult)
         std::cout << x;
