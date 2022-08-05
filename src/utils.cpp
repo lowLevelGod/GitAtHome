@@ -91,3 +91,13 @@ const std::string Utils::getMode(const std::string& fileName)
     }
     return "NULL";
 }
+
+const std::vector<char> int32ToBytes(const int x)
+{
+    return std::vector<char>({
+        static_cast<char>((x >> 24) & 0xff),
+        static_cast<char>((x >> 16) & 0xff),
+        static_cast<char>((x >> 8) & 0xff),
+        static_cast<char>((x >> 0) & 0xff)
+    });
+}

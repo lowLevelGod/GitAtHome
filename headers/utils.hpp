@@ -9,4 +9,5 @@ class Utils
         static const std::vector<char> readBinaryFile(const std::string&);
         static const std::vector<char> decompressObject(const std::string& ,const size_t);
         static const std::string getMode(const std::string&);
+        static const std::vector<char> int32ToBytes(const int );
 };

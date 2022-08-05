@@ -23,5 +23,6 @@ class Tree : public Object
         void serialize(const std::string&) const override;
         void print() const override;
         Tree(std::vector<TreeEntry>&);
+        Tree() : Object() {}
         ~Tree() override = default;
 };

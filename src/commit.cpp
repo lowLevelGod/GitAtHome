@@ -4,7 +4,7 @@
 
 const std::string Commit::getHeader(const size_t len) const
 {
-    return "commit" + Object::getHeader(len);;
+    return "commit" + Object::getHeader(len);
 }
 
 Commit::Commit(const Tree& tree, const CommitMessage& cm, const std::vector<std::string>& parents)
@@ -33,7 +33,7 @@ Commit::Commit(const Tree& tree, const CommitMessage& cm, const std::vector<std:
     
     hash.assign(Utils::getSHA1hash(result));
 
-    tree.serialize("");
+    // tree.serialize("");
     tree.print();
 }
 

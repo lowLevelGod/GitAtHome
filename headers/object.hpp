@@ -15,6 +15,7 @@ class Object
         const std::string getPath() const;
         virtual void serialize(const std::string&) const; // DO NOT LIKE THIS USELESS PARAMETER AT ALL. HAVE TO FIX LATER
         virtual void print() const = 0;
+        Object() : hash("") {}
         virtual ~Object() = default;
 
 };
