@@ -12,7 +12,7 @@
 #include <../headers/index.hpp>
 #include <fcntl.h>
 
-const std::set<std::string> Git::ignoredDirs = {".", "..", ".git", ".gitAtHome", "webserver"};
+const std::set<std::string> Git::ignoredDirs = {".", "..", ".git", ".gitAtHome", "webserver", "build"};
 const std::string Git::gitDir = "./.gitAtHome";
 
 void Git::init()

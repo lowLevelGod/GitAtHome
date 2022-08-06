@@ -148,3 +148,27 @@ void Index::print() const
 {
    // TO DO
 }
+
+bool Index::checkSignature(const std::string& s)
+{
+    return (s.substr(0, 4) == "DIRC") &&
+            s[4] == '\0' && s[5] == '\0' &&
+            s[6] == '\0' && s[7] == '\0';
+}
+
+void Index::parseIndexFile()
+{
+    std::vector<char> index = Utils::readBinaryFile(Git::gitDir + "/" + "index");
+    if (!checkSignature(std::string(index.begin(), index.begin() + 8)))
+    {
+        std::cout << "Bad index signature!" << std::endl;
+        return;
+    }
+
+    uint32_t entryCount = (index[8] << 24) | (index[9] << 16) 
+                        | (index[10] << 8) | (index[11] << 0);
+    for (size_t i = 0; i < entryCount; ++i)
+    {
+        // TO DO PARSE INDEX
+    }
+}

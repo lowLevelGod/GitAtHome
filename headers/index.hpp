@@ -29,7 +29,9 @@ class Index : public Object
     private:
         std::set<IndexEntry, cmp> entries;
         const std::string getHeader(const size_t) const;
+        bool checkSignature(const std::string&);
     public:
+        void parseIndexFile();
         void add(const std::vector<std::string>&);
         void prepareSerialize();
         void serialize(const std::string&) const;
