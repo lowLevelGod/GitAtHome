@@ -1,4 +1,5 @@
 #include <../headers/utils.hpp>
+#include <../headers/git.hpp>
 #include <sha1.hpp>
 #include <iostream>
 #include <fstream>
@@ -7,6 +8,8 @@
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <sstream>
+#include <sys/dir.h>
+#include <dirent.h>
 
 const std::string Utils::getSHA1hash(const std::vector<char> &content)
 {
@@ -92,7 +95,7 @@ const std::string Utils::getMode(const std::string& fileName)
     return "NULL";
 }
 
-const std::vector<char> int32ToBytes(const int x)
+const std::vector<char> Utils::int32ToBytes(const int x)
 {
     return std::vector<char>({
         static_cast<char>((x >> 24) & 0xff),
@@ -100,4 +103,75 @@ const std::vector<char> int32ToBytes(const int x)
         static_cast<char>((x >> 8) & 0xff),
         static_cast<char>((x >> 0) & 0xff)
     });
+}
+
+const std::vector<char> Utils::packStringToPackedBytes(const std::string& s)
+{
+    std::vector<char> result;
+    for (size_t i = 0, len = s.length(); i < len - 1; i += 2)
+    {
+        uint8_t b1 = 0, b2 = 0;
+        if (s[i] >= '0' && s[i] <= '9')
+            b1 = s[i] - '0';
+        else
+            b1 = s[i] - 'a' + 10;
+        if (s[i + 1] >= '0' && s[i + 1] <= '9')
+            b2 = s[i + 1] - '0';
+        else
+            b2 = s[i + 1] - 'a' + 10;
+        
+        result.push_back(
+            ((b1  & 0xf) << 4)
+            | (b2  & 0xf) 
+        );          
+    }
+
+    return result;
+}
+
+void Utils::writeBinaryFile(const std::string& fileName, const std::vector<char>& v)
+{
+    std::ofstream file(fileName, std::ios::binary);
+   
+    file.write(v.data(), v.size());
+    // std::cerr << fileName << " " << "Error: " << strerror(errno);
+    file.close();
+    if (!file)
+        std::cout << "Write failed!" << std::endl;
+}
+
+const std::vector<std::string> Utils::listAllFiles(const std::string& dirName)
+{
+    std::vector<std::string> files;
+    // std::cout << "Traversing : " << dirName << std::endl;
+    DIR *dir;
+    struct dirent *ent;
+    if ((dir = opendir(dirName.c_str())) != NULL)
+    {
+        /* recurse in directory given by dirName */
+        while ((ent = readdir(dir)) != NULL)
+        {
+            if (Git::ignoredDirs.find(std::string(ent->d_name)) == Git::ignoredDirs.end())
+            {
+                if (ent->d_type == DT_REG) // regular file = blob
+                {
+                    // std::cout << "File : " << dirName + "/" + ent->d_name << std::endl;
+                    files.push_back(std::string(dirName + "/" + ent->d_name));
+                }
+                else if (ent->d_type == DT_DIR) // directory = tree
+                {
+                    std::vector<std::string> tempFiles = Utils::listAllFiles(dirName + "/" + std::string(ent->d_name));
+                    files.insert(files.end(), tempFiles.begin(), tempFiles.end());
+                }
+            }
+        }
+        closedir(dir);
+    }
+    else
+    {
+        /* could not open directory */
+        perror("");
+    }
+
+    return files;
 }

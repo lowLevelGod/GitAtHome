@@ -19,25 +19,9 @@ const std::vector<char> TreeEntry::getTreeEntryString()
     result.assign(prefix.begin(), prefix.end());
 
     // turn SHA1 into 20 bytes
-    std::string tempHash = hash;
-    for (size_t i = 0, len = tempHash.length(); i < len - 1; i += 2)
-    {
-        uint8_t b1 = 0, b2 = 0;
-        if (tempHash[i] >= '0' && tempHash[i] <= '9')
-            b1 = tempHash[i] - '0';
-        else
-            b1 = tempHash[i] - 'a' + 10;
-        if (tempHash[i + 1] >= '0' && tempHash[i + 1] <= '9')
-            b2 = tempHash[i + 1] - '0';
-        else
-            b2 = tempHash[i + 1] - 'a' + 10;
-        
-        result.push_back(
-            ((b1  & 0xf) << 4)
-            | (b2  & 0xf) 
-        );          
-    }
-
+    std::vector<char> packedSHA = Utils::packStringToPackedBytes(hash);
+    result.insert(result.end(), packedSHA.begin(), packedSHA.end());
+    
     return result;
 }
 

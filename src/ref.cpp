@@ -5,11 +5,10 @@
 
 void Ref::updateHead(const std::string& commitHash)
 {
-    std::ofstream file(".gitAtHome/HEAD", std::ios::binary);
-    file.write(commitHash.c_str(), commitHash.length());
-    file.close();
-    if (!file)
-        std::cout << "Write failed!" << std::endl;
+    std::vector<char> v;
+    v.assign(commitHash.begin(), commitHash.end());
+    
+    Utils::writeBinaryFile(".gitAtHome/HEAD", v);
 }
 
 const std::string Ref::getHead()

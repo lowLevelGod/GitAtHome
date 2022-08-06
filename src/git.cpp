@@ -5,23 +5,27 @@
 #include <fstream>
 #include <blob.hpp>
 #include <sys/dir.h>
-#include <set>
 #include <../headers/tree.hpp>
 #include <../headers/commit.hpp>
 #include <../headers/ref.hpp>
 #include <../headers/utils.hpp>
+#include <../headers/index.hpp>
 #include <fcntl.h>
 
-std::set<std::string> ignoredDirs = {".", "..", ".git", ".gitAtHome", "webserver"};
+const std::set<std::string> Git::ignoredDirs = {".", "..", ".git", ".gitAtHome", "webserver"};
+const std::string Git::gitDir = "./.gitAtHome";
 
 void Git::init()
 {
-    mkdir("./.gitAtHome", 0777);
-    mkdir("./.gitAtHome/objects", 0777);
-    mkdir("./.gitAtHome/refs", 0777);
+    mkdir(Git::gitDir.c_str(), 0777);
+    mkdir((Git::gitDir + "/" + "objects").c_str(), 0777);
+    mkdir((Git::gitDir + "/" + "refs").c_str(), 0777);
 
     // create empty HEAD file for now
-    int fd = open("./.gitAtHome/HEAD", O_CREAT | O_EXCL, 0644);
+    int fd = open((Git::gitDir + "/" + "HEAD").c_str(), O_CREAT | O_EXCL, 0644);
+    close(fd);
+    // create empty index file for now
+    fd = open((Git::gitDir + "/" + "index").c_str(), O_CREAT | O_EXCL, 0644);
     close(fd);
 }
 
@@ -97,5 +101,12 @@ const Tree Git::createCommitTree(const std::string& dirName)
 void Git::run()
 {
     init();
-    Git::commit();
+    // Git::commit();
+    Index index;
+    // index.add(std::vector<std::string>({
+    //     "test.txt"
+    //     }));
+    index.add(Utils::listAllFiles("."));
+    index.prepareSerialize();
+    index.serialize("");
 }

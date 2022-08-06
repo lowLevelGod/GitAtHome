@@ -1,12 +1,13 @@
 #include <../headers/object.hpp>
 #include <../headers/utils.hpp>
+#include <../headers/git.hpp>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <iostream>
 
 const std::string Object::getPath() const
 {
-    std::string pathDir = "./.gitAtHome/objects/" + hash.substr(0, 2);
+    std::string pathDir = Git::gitDir + "/" + "objects" + "/" + hash.substr(0, 2);
 
     struct stat st = {0};
 
@@ -14,7 +15,7 @@ const std::string Object::getPath() const
         mkdir(pathDir.c_str(), 0777); // testing purposes
     }
 
-    return "./.gitAtHome/objects/" + hash.substr(0, 2) + "/" + hash.substr(2);
+    return Git::gitDir + "/" + "objects" + "/" + hash.substr(0, 2) + "/" + hash.substr(2);
 }
 
 const std::string Object::getHeader(const size_t len) const
@@ -55,11 +56,6 @@ void Object::serialize(const std::string& header) const
     }
     //resize vector to actual size of compressed data
     compressedResult.resize(compSize);
-    std::ofstream file(getPath(), std::ios::binary);
-   
-    file.write(compressedResult.data(), compressedResult.size());
-    
-    file.close();
-    if (!file)
-        std::cout << "Write failed!" << std::endl;
+
+    Utils::writeBinaryFile(getPath(), compressedResult);
 }
