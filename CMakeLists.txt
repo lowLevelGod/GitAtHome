@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ~/GitAtHome)
 
 include_directories(headers /usr/include)
-set(SOURCES src/main.cpp src/blob.cpp src/commit.cpp src/git.cpp src/index.cpp src/object.cpp src/ref.cpp src/tree.cpp src/utils.cpp)
+set(SOURCES src/main.cpp src/blob.cpp src/commit.cpp src/git.cpp src/index.cpp src/object.cpp src/ref.cpp src/tree.cpp src/utils.cpp src/flatToTree.cpp)
 add_executable(${PROJECT_NAME} ${SOURCES})
 
 target_link_libraries(${PROJECT_NAME} z)

@@ -9,9 +9,7 @@ const std::string Object::getPath() const
 {
     std::string pathDir = Git::gitDir + "/" + "objects" + "/" + hash.substr(0, 2);
 
-    struct stat st = {0};
-
-    if (stat(pathDir.c_str(), &st) == -1) { // check if directory exists
+    if (!Utils::fileExists(pathDir)) { // check if directory exists
         mkdir(pathDir.c_str(), 0777); // testing purposes
     }
 
@@ -32,11 +30,10 @@ void Object::serialize(const std::string& header) const
 {
     struct stat st = {0};
 
-    if (stat(getPath().c_str(), &st) != -1) { // check if object exists
+    if (Utils::fileExists(getPath())) { // check if object exists
         // don't create object twice
         return;
     }
-
     // append blob content to header
     std::vector<char> result(header.begin(), header.end());
     result.insert(result.end(), content.begin(), content.end());

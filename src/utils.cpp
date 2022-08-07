@@ -156,7 +156,13 @@ const std::vector<std::string> Utils::listAllFiles(const std::string& dirName)
                 if (ent->d_type == DT_REG) // regular file = blob
                 {
                     // std::cout << "File : " << dirName + "/" + ent->d_name << std::endl;
-                    files.push_back(std::string(dirName + "/" + ent->d_name));
+                    std::string pushedFile = std::string(dirName + "/" + ent->d_name);
+                    if (pushedFile.length() > 1 && 
+                    pushedFile[0] == '.' && 
+                    pushedFile [1] == '/')
+                        pushedFile = pushedFile.substr(2);
+
+                    files.push_back(pushedFile);
                 }
                 else if (ent->d_type == DT_DIR) // directory = tree
                 {
@@ -174,4 +180,31 @@ const std::vector<std::string> Utils::listAllFiles(const std::string& dirName)
     }
 
     return files;
+}
+
+const uint32_t Utils::bytesToInt32(const std::vector<char>& v)
+{
+    return (v[0] << 24) | (v[1] << 16)
+             | (v[2] << 8) | (v[3] << 0);
+}
+
+const std::string Utils::unpackBytesToString(const std::vector<char>& v)
+{
+    const std::string hexChars = "0123456789abcdef";
+    std::string result = "";
+
+    for (auto b : v)
+    {
+        result += hexChars[static_cast<size_t>((b >> 4) & 0xf)];
+        result += hexChars[static_cast<size_t>((b >> 0) & 0xf)];
+    }
+
+    return result;
+}
+
+const bool Utils::fileExists(const std::string& fileName)
+{
+    struct stat st = {0};
+
+    return (stat(fileName.c_str(), &st) != -1);
 }

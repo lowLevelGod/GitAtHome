@@ -10,7 +10,7 @@
 
 IndexEntry::IndexEntry(const std::string& fileName) : fileName(fileName)
 {
-    if (stat(fileName.c_str(), &st) != -1)
+    if (Utils::fileExists(fileName))
     {
         std::string stringMode = Utils::getMode(fileName);
         flags = std::min(fileName.length(), static_cast<size_t>(0xfff));
@@ -30,6 +30,17 @@ IndexEntry::IndexEntry(const std::string& fileName) : fileName(fileName)
     {
         perror("");
     }
+}
+
+IndexEntry& IndexEntry::operator=(const IndexEntry& ie)
+{
+    st = ie.st;
+    hash = ie.hash; 
+    flags = ie.flags;
+    fileName = ie.fileName;
+    obj = ie.obj;
+
+    return *this;
 }
 
 const std::vector<char> IndexEntry::getIndexEntryString() const
@@ -77,12 +88,11 @@ const std::vector<char> IndexEntry::getIndexEntryString() const
 
     // file name
     result.insert(result.end(), fileName.begin(), fileName.end());
-
     // pad to multiple of 8
     int padding = 8 - result.size() % 8;
     for (int i = 1; i <= padding; ++i)
         result.push_back('\0');
-    
+
     return result;
 }
 
@@ -110,7 +120,7 @@ void Index::prepareSerialize()
     content.clear(); // we make sure to add all elements again, not over last ones
     for (auto e : entries)
     {
-        std::vector<char> entryString = e.getIndexEntryString();
+        std::vector<char> entryString = e.second.getIndexEntryString();
         content.insert(content.end(), entryString.begin(), entryString.end());
     }
     std::string header = getHeader(entries.size());
@@ -122,11 +132,10 @@ void Index::prepareSerialize()
 
 void Index::add(const std::vector<std::string>& files)
 {
+    changed = true;
     for (auto file : files)
-    {
-        IndexEntry indexEntry(file);
-        entries.insert(indexEntry);
-    }
+        entries[file] = IndexEntry(file);
+    
 }
 
 void Index::serialize(const std::string&) const
@@ -158,17 +167,94 @@ bool Index::checkSignature(const std::string& s)
 
 void Index::parseIndexFile()
 {
+
+    entries.clear(); // flush junk data
     std::vector<char> index = Utils::readBinaryFile(Git::gitDir + "/" + "index");
+    if (index.size() == 0)
+        return;
     if (!checkSignature(std::string(index.begin(), index.begin() + 8)))
     {
         std::cout << "Bad index signature!" << std::endl;
         return;
     }
 
-    uint32_t entryCount = (index[8] << 24) | (index[9] << 16) 
-                        | (index[10] << 8) | (index[11] << 0);
+    uint32_t entryCount = Utils::bytesToInt32(std::vector<char>(index.begin() + 8, index.begin() + 12));
+    
+    size_t start = 12;
     for (size_t i = 0; i < entryCount; ++i)
     {
-        // TO DO PARSE INDEX
+        struct stat st;
+        st.st_ctim.tv_sec = Utils::bytesToInt32(std::vector<char>(index.begin() + start, index.begin() + start + 4));
+        start += 4;
+        st.st_ctim.tv_nsec = Utils::bytesToInt32(std::vector<char>(index.begin() + start, index.begin() + start + 4));
+        start += 4;
+        st.st_mtim.tv_sec = Utils::bytesToInt32(std::vector<char>(index.begin() + start, index.begin() + start + 4));
+        start += 4;
+        st.st_mtim.tv_nsec = Utils::bytesToInt32(std::vector<char>(index.begin() + start, index.begin() + start + 4));
+        start += 4;
+        st.st_dev = Utils::bytesToInt32(std::vector<char>(index.begin() + start, index.begin() + start + 4));
+        start += 4;
+        st.st_ino = Utils::bytesToInt32(std::vector<char>(index.begin() + start, index.begin() + start + 4));
+        start += 4;
+        st.st_mode  = Utils::bytesToInt32(std::vector<char>(index.begin() + start, index.begin() + start + 4));
+        start += 4;
+        st.st_uid = Utils::bytesToInt32(std::vector<char>(index.begin() + start, index.begin() + start + 4));
+        start += 4;
+        st.st_gid = Utils::bytesToInt32(std::vector<char>(index.begin() + start, index.begin() + start + 4));
+        start += 4;
+        st.st_size = Utils::bytesToInt32(std::vector<char>(index.begin() + start, index.begin() + start + 4));
+        start += 4;
+
+        std::string ieHash = Utils::unpackBytesToString(std::vector<char>(index.begin() + start, index.begin() + start + 20));
+        start += 20;
+
+        uint16_t ieFlags = (index[start] << 8) | index[start + 1];
+        start += 2;
+
+        std::string ieFileName = "";
+        for (; index[start] != '\0'; ++start)
+            ieFileName += index[start];
+
+        start = start + 8 - (start - 12) % 8;
+        entries[ieFileName] = IndexEntry(st, ieHash, ieFlags, ieFileName);
     }
+    
+    if (Utils::getSHA1hash(std::vector<char>(index.begin(), index.end() - 20))
+        != Utils::unpackBytesToString(
+            std::vector<char>(index.end() - 20, index.end())
+            ))
+                std::cout << "Checksum corrupt !" << std::endl;
+}
+
+Index::Index() : Object(), entries(std::map<std::string, IndexEntry>()), changed(false)
+{
+    if (Utils::fileExists(Git::gitDir + "/" + "index"))
+        parseIndexFile();
+}
+
+const std::vector<std::string> Index::getFilePaths()
+{
+    std::vector<std::string> paths;
+    for (auto e : entries)
+    {
+        paths.push_back(e.first);
+    }
+
+    return paths;
+}
+
+const std::vector<IndexEntry> Index::getEntries()
+{
+    std::vector<IndexEntry> result;
+    for (auto x : entries)
+        result.push_back(x.second);
+        
+    return result;
+}
+
+void Index::saveUpdates()
+{
+    prepareSerialize();
+    serialize("");
+    changed = false;
 }

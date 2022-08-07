@@ -11,6 +11,7 @@
 #include <../headers/utils.hpp>
 #include <../headers/index.hpp>
 #include <fcntl.h>
+#include <../headers/flatToTree.hpp>
 
 const std::set<std::string> Git::ignoredDirs = {".", "..", ".git", ".gitAtHome", "webserver", "build"};
 const std::string Git::gitDir = "./.gitAtHome";
@@ -31,14 +32,18 @@ void Git::init()
 
 void Git::commit()
 {
+    Index index;
     // get commit hash at HEAD
     std::string head = Ref::getHead();
     std::vector<std::string> parents;
     if (head != "")
         parents.push_back(head);
 
+    FlatToTree ftree;
+    ftree.flatToTree(index.getFilePaths());
+
     Commit curCommit(
-        Git::createCommitTree("."),
+        Git::createCommitTree(ftree.getRoot()),
         CommitMessage("lowLevelGod", "lowLevelGod", "initial commit !"),
         parents);
     
@@ -54,59 +59,45 @@ void Git::commit()
     Ref::updateHead(curCommit.getHash());
 }
 
-const Tree Git::createCommitTree(const std::string& dirName)
+const Tree Git::createCommitTree(const std::shared_ptr<Node>& currentNode)
 {
-    // std::cout << "Traversing : " << dirName << std::endl;
-    DIR *dir;
-    struct dirent *ent;
-    if ((dir = opendir(dirName.c_str())) != NULL)
+    std::vector<TreeEntry> treeEntries;
+    for (auto child : currentNode->children)
     {
-        std::vector<TreeEntry> treeEntries;
-        /* recurse in directory given by dirName */
-        while ((ent = readdir(dir)) != NULL)
+        std::string absolutePath = "";
+        if (currentNode->name != "")
+            absolutePath = currentNode->name + "/";
+        absolutePath += child->name;
+        // std::cout << child->name << std::endl;
+        if (child->children.empty()) // if it has no children, then it's a blob
         {
-            if (ignoredDirs.find(std::string(ent->d_name)) == ignoredDirs.end())
-            {
-                if (ent->d_type == DT_REG) // regular file = blob
-                {
-                    // std::cout << "File : " << dirName + "/" + ent->d_name << std::endl;
-                    treeEntries.push_back(TreeEntry( 
-                        std::string(ent->d_name), 
-                        Blob(std::string(dirName + "/" + ent->d_name))
-                        ));
-                }
-                else if (ent->d_type == DT_DIR) // directory = tree
-                {
-                    treeEntries.push_back(TreeEntry(
-                        std::string(ent->d_name),
-                        Tree(Git::createCommitTree(dirName + "/" + std::string(ent->d_name)))
-                    ));
-                }
-            }
+            treeEntries.push_back(TreeEntry(
+                child->name,
+                Blob(absolutePath)
+            ));
+        }else // it's a tree
+        {
+            treeEntries.push_back(TreeEntry(
+                child->name,
+                Tree(createCommitTree(child))
+            ));
         }
-        closedir(dir);
-        Tree tempTree(treeEntries);
-        tempTree.serialize("");
+    }
 
-        return tempTree;
-    }
-    else
-    {
-        /* could not open directory */
-        perror("");
-        return Tree();
-    }
+    Tree tempTree(treeEntries);
+    tempTree.serialize("");
+
+    return tempTree;
 }
 
 void Git::run()
 {
     init();
-    // Git::commit();
-    Index index;
+    Git::commit();
+    // Index index;
     // index.add(std::vector<std::string>({
     //     "test.txt"
     //     }));
-    index.add(Utils::listAllFiles("."));
-    index.prepareSerialize();
-    index.serialize("");
+    // index.add(Utils::listAllFiles("."));
+    // index.saveUpdates();
 }

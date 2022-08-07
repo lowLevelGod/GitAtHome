@@ -35,10 +35,10 @@ TreeEntry::TreeEntry(const std::string& fileName, const Object& obj) : fileName{
 Tree::Tree(std::vector<TreeEntry>& entries)
 {   
     // sort tree entries after file name/folder name
-    std::sort(entries.begin(), entries.end(), []
-    (const TreeEntry& first, const TreeEntry& second){
-        return first.getFileName() < second.getFileName();
-    });
+    // std::sort(entries.begin(), entries.end(), []
+    // (const TreeEntry& first, const TreeEntry& second){
+    //     return first.getFileName() < second.getFileName();
+    // });
 
     std::vector<char> result;
     for (auto e : entries)

@@ -13,6 +13,8 @@ class TreeEntry
         const std::vector<char> getTreeEntryString();
         const std::string& getFileName() const{ return fileName;}
         TreeEntry(const std::string&, const Object&);
+        TreeEntry(const std::string& mode, const std::string& fileName, const std::string& hash) 
+        : mode(mode), fileName(fileName), hash(hash) {}
 };
 
 class Tree : public Object

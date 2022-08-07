@@ -3,6 +3,7 @@
 #include <string>
 #include <tree.hpp>
 #include <set>
+#include <flatToTree.hpp>
 
 class Git
 {             
@@ -12,5 +13,5 @@ class Git
         static void run();
         static void init();
         static void commit();
-        static const Tree createCommitTree(const std::string&);
+        static const Tree createCommitTree(const std::shared_ptr<Node>&);
 };
