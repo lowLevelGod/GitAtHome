@@ -20,9 +20,9 @@ class FlatToTree
     private:
         std::shared_ptr<Node> root;
     public:
-        const std::vector<std::string> splitPath(std::string);
-        void flatToTree(const std::vector<std::string>&);
+        void insert(const std::vector<std::string>&);
         void dfs(const std::shared_ptr<Node>&);
         void bfs(const std::shared_ptr<Node>&);
         const std::shared_ptr<Node>& getRoot() { return root;}
+        FlatToTree() : root(std::make_shared<Node>(std::vector<std::shared_ptr<Node>>(), "", nullptr)) {}
 };

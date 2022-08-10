@@ -13,7 +13,7 @@ const std::vector<char> TreeEntry::getTreeEntryString()
     std::string prefix = "";
     prefix += mode;
     prefix += fileName;
-    prefix += "\0";
+    prefix += '\0';
 
     std::vector<char> result;
     result.assign(prefix.begin(), prefix.end());
@@ -62,9 +62,5 @@ void Tree::serialize(const std::string& t = "") const
 
 void Tree::print() const
 {
-    std::vector<char> decompressedResult = Utils::decompressObject(getPath() ,
-                                                                getHeader(content.size()).length() + content.size() + 1);
-    for (auto x : decompressedResult)
-        std::cout << x;
-    std::cout << std::endl;
+   
 }

@@ -130,11 +130,59 @@ void Index::prepareSerialize()
     hash.assign(Utils::getSHA1hash(result));
 }
 
+void Index::removeEntry(const std::string& path)
+{
+    entries.erase(path);
+    // split path into directories
+    std::vector<std::string> dirs = Utils::splitPath(path);
+
+    std::string currentDeletedDir = "";
+    for (size_t len = dirs.size(), i = 0; i < len - 1; ++i)
+    {
+        currentDeletedDir += dirs[i];
+        directories[currentDeletedDir].erase(path);
+        if (directories[currentDeletedDir].empty())
+            directories.erase(currentDeletedDir);
+        currentDeletedDir += "/";
+    }
+}
+
+void Index::removeChildren(const std::string& path)
+{
+    if (directories.find(path) != directories.end())
+    {
+        std::set<std::string> children = directories[path];
+        for (auto x : children)
+            removeEntry(x);
+    }
+}
+
+void Index::discardConflicts(const std::string& file)
+{
+    // split path into directories
+    std::vector<std::string> dirs = Utils::splitPath(file);
+
+    std::string currentDeletedDir = "";
+    for (size_t len = dirs.size(), i = 0; i < len - 1; ++i)
+    {
+        currentDeletedDir += dirs[i];
+        removeEntry(currentDeletedDir);
+        currentDeletedDir += "/";
+    }
+    removeChildren(file);
+}
+
 void Index::add(const std::vector<std::string>& files)
 {
     changed = true;
     for (auto file : files)
+    {   
+        // make sure there are no files with same
+        //  name as directories on the given file path
+        discardConflicts(file); 
         entries[file] = IndexEntry(file);
+        // std::cout << entries[file].getFileName() << " " << entries[file].getMode() << " " << entries[file].getHash() << std::endl;
+    }
     
 }
 
@@ -217,6 +265,21 @@ void Index::parseIndexFile()
 
         start = start + 8 - (start - 12) % 8;
         entries[ieFileName] = IndexEntry(st, ieHash, ieFlags, ieFileName);
+        // split path into directories
+        std::vector<std::string> dirs = Utils::splitPath(ieFileName);
+
+        std::string currentDir = "";
+        for (size_t len = dirs.size(), i = 0; i < len - 1; ++i)
+        {
+            currentDir += dirs[i];
+            // add files to all parent directories
+            if (directories.find(currentDir) == directories.end())
+                directories[currentDir] = std::set<std::string>({ieFileName});
+            else
+                directories[currentDir].insert(ieFileName);
+            currentDir += "/";
+        }
+
     }
     
     if (Utils::getSHA1hash(std::vector<char>(index.begin(), index.end() - 20))
@@ -226,7 +289,7 @@ void Index::parseIndexFile()
                 std::cout << "Checksum corrupt !" << std::endl;
 }
 
-Index::Index() : Object(), entries(std::map<std::string, IndexEntry>()), changed(false)
+Index::Index() : Object(), directories(std::map<std::string, std::set<std::string>>()), entries(std::map<std::string, IndexEntry>()), changed(false)
 {
     if (Utils::fileExists(Git::gitDir + "/" + "index"))
         parseIndexFile();

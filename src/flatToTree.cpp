@@ -3,30 +3,14 @@
 #include <queue>
 #include <iostream>
 
-const std::vector<std::string> FlatToTree::splitPath(std::string path)
-{
-    std::vector<std::string> result;
-    size_t pos = 0;
-    while ((pos = path.find('/')) != std::string::npos)
-    {
-        result.push_back(path.substr(0, pos));
-        path = path.substr(pos + 1);
-    }
-    
-    result.push_back(path);
-
-    return result;
-}
-
-void FlatToTree::flatToTree(const std::vector<std::string>& paths)
+void FlatToTree::insert(const std::vector<std::string>& paths)
 {
     // root node is the empty path
-    std::shared_ptr<Node> root = std::make_shared<Node>(std::vector<std::shared_ptr<Node>>(), "", nullptr);
 
     for (auto path : paths)
     {
         // get all directories on path or file in case of last token
-        std::vector<std::string> tokens = splitPath(path);
+        std::vector<std::string> tokens = Utils::splitPath(path);
         std::shared_ptr<Node> currentNode = root;
         for (auto token : tokens)
         {
@@ -52,7 +36,6 @@ void FlatToTree::flatToTree(const std::vector<std::string>& paths)
         }
     }
 
-    this->root = root;
 }
 
 void FlatToTree::dfs(const std::shared_ptr<Node>& currentNode)

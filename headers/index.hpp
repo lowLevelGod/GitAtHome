@@ -4,6 +4,7 @@
 #include <memory>
 #include <map>
 #include <utils.hpp>
+#include <set>
 
 class IndexEntry
 {
@@ -31,6 +32,7 @@ class IndexEntry
 class Index : public Object
 {
     private:
+        std::map<std::string, std::set<std::string>> directories;
         std::map<std::string, IndexEntry> entries;
         bool changed;
         const std::string getHeader(const size_t) const;
@@ -38,6 +40,9 @@ class Index : public Object
         void prepareSerialize();
         void serialize(const std::string&) const;
         void parseIndexFile();
+        void discardConflicts(const std::string&);
+        void removeEntry(const std::string&);
+        void removeChildren(const std::string&);
     public:
         void add(const std::vector<std::string>&);
         void print() const;

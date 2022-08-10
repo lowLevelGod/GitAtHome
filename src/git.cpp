@@ -40,7 +40,7 @@ void Git::commit()
         parents.push_back(head);
 
     FlatToTree ftree;
-    ftree.flatToTree(index.getFilePaths());
+    ftree.insert(index.getFilePaths());
 
     Commit curCommit(
         Git::createCommitTree(ftree.getRoot()),
@@ -53,7 +53,7 @@ void Git::commit()
         std::cout << "[root - commit] ";
     else
         std::cout << "[master - " << parents[0].substr(0, 7) << "]"; 
-    curCommit.print();
+    Utils::parseObjectFile(Utils::getPathFromHash(curCommit.getHash()));
 
     // update current commit
     Ref::updateHead(curCommit.getHash());
@@ -72,13 +72,13 @@ const Tree Git::createCommitTree(const std::shared_ptr<Node>& currentNode)
         if (child->children.empty()) // if it has no children, then it's a blob
         {
             treeEntries.push_back(TreeEntry(
-                child->name,
+                absolutePath,
                 Blob(absolutePath)
             ));
         }else // it's a tree
         {
             treeEntries.push_back(TreeEntry(
-                child->name,
+                absolutePath,
                 Tree(createCommitTree(child))
             ));
         }
@@ -93,6 +93,14 @@ const Tree Git::createCommitTree(const std::shared_ptr<Node>& currentNode)
 void Git::run()
 {
     init();
+    Index index;
+    index.add(Utils::listAllFiles("."));
+    index.saveUpdates();
+    // FlatToTree ftree;
+    // ftree.insert(Utils::listAllFiles("src"));
+    // Tree tree = Git::createCommitTree(ftree.getRoot());
+    // for (auto path : Utils::listAllFiles(gitDir + '/' + "objects"))
+    //     Utils::parseObjectFile(path);
     Git::commit();
     // Index index;
     // index.add(std::vector<std::string>({

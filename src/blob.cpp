@@ -18,6 +18,7 @@ Blob::Blob(const std::string& fileName)
 {
     // read file content
     content = Utils::readBinaryFile(fileName);
+    // std::cout << "Actual size of content: " << content.size() << std::endl;
     // create header
     std::string header = getHeader(content.size());
 
@@ -26,12 +27,16 @@ Blob::Blob(const std::string& fileName)
     hashedContent.insert(hashedContent.end(), content.begin(), content.end());
     hash.assign(Utils::getSHA1hash(hashedContent));
 }
+
+Blob::Blob(const std::vector<char>& content) : Object(content)
+{
+    std::string header = "blob " + std::to_string(content.size()) + '\0';
+    std::vector<char> result(header.begin(), header.end());
+    result.insert(result.end(), content.begin(), content.end());
+    hash = Utils::getSHA1hash(result);
+}
  
 void Blob::print() const
 {   
-    std::vector<char> decompressedResult = Utils::decompressObject(getPath() ,
-                                                                getHeader(content.size()).length() + content.size() + 1);
-    for (auto x : decompressedResult)
-        std::cout << x;
-    std::cout << std::endl;
+    
 }

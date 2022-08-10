@@ -10,6 +10,7 @@
 #include <sstream>
 #include <sys/dir.h>
 #include <dirent.h>
+#include <algorithm>
 
 const std::string Utils::getSHA1hash(const std::vector<char> &content)
 {
@@ -29,6 +30,11 @@ const std::string Utils::getSHA1hash(const std::vector<char> &content)
 
 const std::vector<char> Utils::readBinaryFile(const std::string &fileName)
 {
+    if (!fileExists(fileName))
+    {
+        std::cout << "File: " << fileName << " does not exist!" << std::endl;
+        return std::vector<char>();
+    }
     std::vector<char> result;
     std::ifstream file(fileName, std::ios::binary);
 
@@ -38,6 +44,8 @@ const std::vector<char> Utils::readBinaryFile(const std::string &fileName)
     file.seekg(0, std::ios::end);
     fileSize = file.tellg();
     file.seekg(0, std::ios::beg);
+
+    // std::cout << "File: " << fileName << " has size " << fileSize << std::endl;
 
     result.reserve(fileSize);
 
@@ -53,25 +61,25 @@ const std::vector<char> Utils::readBinaryFile(const std::string &fileName)
     return result;
 }
 
-const std::vector<char> Utils::decompressObject(const std::string &fileName, const size_t len)
+const std::vector<char> Utils::decompressBytes(const std::vector<char>& compressed, const size_t len)
 {
-    // read compressed blob from objects
-    std::vector<char> compressed(Utils::readBinaryFile(fileName));
-
     uLong ucompSize = len;
-    uLong compSize = compressBound(ucompSize);
+    uLong compSize = compressBound(compressed.size());
     std::vector<char> decompressedResult(ucompSize); // allocate enough size for output buffer
+    int result = 0;
     // Inflate
     try
     {
-        uncompress((Bytef *)decompressedResult.data(), &ucompSize, (Bytef *)compressed.data(), compSize);
+        result = uncompress((Bytef *)decompressedResult.data(), &ucompSize, (Bytef *)compressed.data(), compSize);
     }
     catch (const std::exception &e)
     {
         // std::cerr << e.what() << '\n';
         std::cout << "Decompression failed!" << std::endl;
     }
-
+   
+    //     std::cout << result;
+    // std::cout << std::endl;
     return decompressedResult;
 }
 
@@ -79,6 +87,7 @@ const std::string Utils::getMode(const std::string& fileName)
 {
     struct stat st = {0};
 
+    std::string result;
     if (stat(fileName.c_str(), &st) != -1) { // check if file exists
         
         std::ostringstream str;
@@ -92,7 +101,8 @@ const std::string Utils::getMode(const std::string& fileName)
         else
             return "100644";
     }
-    return "NULL";
+    // std::cout << fileName << " " << Utils::fileExists(fileName) << std::endl;
+    return result;
 }
 
 const std::vector<char> Utils::int32ToBytes(const int x)
@@ -207,4 +217,142 @@ const bool Utils::fileExists(const std::string& fileName)
     struct stat st = {0};
 
     return (stat(fileName.c_str(), &st) != -1);
+}
+
+const std::vector<std::string> Utils::splitPath(std::string path)
+{
+    std::vector<std::string> result;
+    size_t pos = 0;
+    while ((pos = path.find('/')) != std::string::npos)
+    {
+        result.push_back(path.substr(0, pos));
+        path = path.substr(pos + 1);
+    }
+    
+    result.push_back(path);
+
+    return result;
+}
+
+const std::shared_ptr<Object> Utils::parseObjectFile(const std::string& path)
+{
+    std::vector<char> file = Utils::readBinaryFile(path);
+    // 30 characters should be enough to get actual size of object
+    std::vector<char> header = Utils::decompressBytes(file, 30);
+
+    std::vector<char>::iterator firstSpace = std::find(header.begin(), header.end(), ' ');
+
+    std::string objectType(header.begin(), firstSpace);
+    std::vector<char>::iterator firstNull = std::find(firstSpace, header.end(), '\0');
+    // std::cout << "File : " << path << std::endl;
+    // for (auto x : header)
+    //     std::cout << x;
+    // std::cout << std::endl;
+    std::string objectSize = std::string(firstSpace + 1, firstNull);
+    // std::cout << "OBJ SIZE " << objectSize << std::endl;
+
+    // save decompressed content
+    file = Utils::decompressBytes(file, std::stoi(objectSize, 0, 10) + objectType.length() + objectSize.length() + 2); // not sure why + 5
+    if (objectType == "tree")
+    {
+        return Utils::parseTree(std::vector(
+            std::find(file.begin(), file.end(), '\0') + 1, file.end()
+            ));
+    }else if (objectType == "commit")
+    {
+        return Utils::parseCommit(std::vector(
+            std::find(file.begin(), file.end(), '\0') + 1, file.end()
+            ));
+    }else if (objectType == "blob")
+    {
+        return Utils::parseBlob(std::vector(
+            std::find(file.begin(), file.end(), '\0') + 1, file.end()
+            ));
+    }
+
+    return nullptr;
+}
+
+const std::shared_ptr<Blob> Utils::parseBlob(const std::vector<char>& file)
+{
+    // for (auto x : file)
+    //     std::cout << x;
+    // std::cout << std::endl;
+    
+    return std::make_shared<Blob>(file);
+}
+
+const std::shared_ptr<Tree> Utils::parseTree(const std::vector<char>& file)
+{
+    // std::cout << "Size: " << file.size() << std::endl;
+    std::vector<TreeEntry> entries;
+    for (size_t i = 0, len = file.size(); i < len; ++i) // not sure why len - 1
+    {
+        std::string fileMode = "";
+
+        size_t fmodemax = 0;
+        if (file[i] == '4') // directory mode
+            fmodemax = 5;
+        else // file mode
+            fmodemax = 6;
+        
+
+        for (size_t j = 0; j < fmodemax; ++j)
+        {
+            fileMode += file[i + j];
+        }
+        i += fmodemax;
+
+        std::cout << fileMode << " ";
+
+        std::string fileName = "";
+        for (; file[i] != '\0'; ++i)
+            fileName += file[i];
+
+        std::cout << (Utils::splitPath(fileName).end() - 1)[0] << " ";
+        ++i;
+
+        std::string fileHash = "";
+        for (auto x : unpackBytesToString(std::vector<char>(
+            file.begin() + i, 
+            file.begin() + i + 20
+            )))
+                fileHash += x;
+        std::cout << fileHash << std::endl;
+        i += 19;
+
+        entries.push_back(TreeEntry(fileMode, fileName, fileHash));
+        // if (fileMode[0] == '4')
+        // {
+            parseObjectFile(Utils::getPathFromHash(fileHash));
+        // }
+        // std::cout << i << std::endl;
+    }
+    
+    return std::make_shared<Tree>(entries);
+}
+
+const std::shared_ptr<Commit> Utils::parseCommit(const std::vector<char>& file)
+{
+    // for (auto x : file)
+    //     std::cout << x;
+    // std::cout << std::endl;
+
+    std::string treeHash(file.begin() + 5, file.begin() + 5 + 40);
+    // std::cout << treeHash << std::endl;
+
+    parseObjectFile(Utils::getPathFromHash(treeHash));
+
+    return nullptr;
+}
+
+const std::string Utils::getPathFromHash(const std::string& hash) 
+{
+    std::string pathDir = Git::gitDir + "/" + "objects" + "/" + hash.substr(0, 2);
+
+    if (!Utils::fileExists(pathDir)) { // check if directory exists
+        mkdir(pathDir.c_str(), 0777); // testing purposes
+    }
+
+    return Git::gitDir + "/" + "objects" + "/" + hash.substr(0, 2) + "/" + hash.substr(2);
 }

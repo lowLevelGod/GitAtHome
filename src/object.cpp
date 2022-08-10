@@ -5,23 +5,12 @@
 #include <sys/types.h>
 #include <iostream>
 
-const std::string Object::getPath() const
-{
-    std::string pathDir = Git::gitDir + "/" + "objects" + "/" + hash.substr(0, 2);
-
-    if (!Utils::fileExists(pathDir)) { // check if directory exists
-        mkdir(pathDir.c_str(), 0777); // testing purposes
-    }
-
-    return Git::gitDir + "/" + "objects" + "/" + hash.substr(0, 2) + "/" + hash.substr(2);
-}
-
 const std::string Object::getHeader(const size_t len) const
 {
     std::string result = "";
     result += " ";
     result += std::to_string(len);
-    result += "\0";
+    result += '\0';
 
     return result;
 }
@@ -30,7 +19,7 @@ void Object::serialize(const std::string& header) const
 {
     struct stat st = {0};
 
-    if (Utils::fileExists(getPath())) { // check if object exists
+    if (Utils::fileExists(Utils::getPathFromHash(hash))) { // check if object exists
         // don't create object twice
         return;
     }
@@ -54,5 +43,5 @@ void Object::serialize(const std::string& header) const
     //resize vector to actual size of compressed data
     compressedResult.resize(compSize);
 
-    Utils::writeBinaryFile(getPath(), compressedResult);
+    Utils::writeBinaryFile(Utils::getPathFromHash(hash), compressedResult);
 }

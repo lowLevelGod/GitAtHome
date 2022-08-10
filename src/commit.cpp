@@ -45,9 +45,5 @@ void Commit::serialize(const std::string& t = "") const
 
 void Commit::print() const
 {
-    std::vector<char> decompressedResult = Utils::decompressObject(getPath() ,
-                                                                getHeader(content.size()).length() + content.size() + 1);
-    for (auto x : decompressedResult)
-        std::cout << x;
-    std::cout << std::endl;
+  
 }
