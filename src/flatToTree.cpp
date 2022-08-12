@@ -38,6 +38,37 @@ void FlatToTree::insert(const std::vector<std::string>& paths)
 
 }
 
+const Tree FlatToTree::createCommitTree(const std::shared_ptr<Node>& currentNode)
+{
+    std::vector<TreeEntry> treeEntries;
+    for (auto child : currentNode->children)
+    {
+        std::string absolutePath = "";
+        if (currentNode->name != "")
+            absolutePath = currentNode->name + "/";
+        absolutePath += child->name;
+        // std::cout << child->name << std::endl;
+        if (child->children.empty()) // if it has no children, then it's a blob
+        {
+            treeEntries.push_back(TreeEntry(
+                absolutePath,
+                Blob(absolutePath)
+            ));
+        }else // it's a tree
+        {
+            treeEntries.push_back(TreeEntry(
+                absolutePath,
+                Tree(createCommitTree(child))
+            ));
+        }
+    }
+
+    Tree tempTree(treeEntries);
+    tempTree.serialize("");
+
+    return tempTree;
+}
+
 void FlatToTree::dfs(const std::shared_ptr<Node>& currentNode)
 {
     for (auto child : currentNode->children)

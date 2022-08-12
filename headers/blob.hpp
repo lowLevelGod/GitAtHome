@@ -9,6 +9,6 @@ class Blob : public Object
         void serialize(const std::string&) const override;
         void print() const override;
         explicit Blob(const std::string&);
-        explicit Blob(const std::vector<char>&);
+        explicit Blob(const std::vector<uint8_t>&);
         ~Blob() override = default;
 };

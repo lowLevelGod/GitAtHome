@@ -10,9 +10,12 @@
 
 IndexEntry::IndexEntry(const std::string& fileName) : fileName(fileName)
 {
-    if (Utils::fileExists(fileName))
+    struct stat st = {0};
+
+    if (stat(fileName.c_str(), &st) != -1)
     {
         std::string stringMode = Utils::getMode(fileName);
+        this->st = st;
         flags = std::min(fileName.length(), static_cast<size_t>(0xfff));
         if (stringMode[0] == '4')
         {
@@ -43,7 +46,7 @@ IndexEntry& IndexEntry::operator=(const IndexEntry& ie)
     return *this;
 }
 
-const std::vector<char> IndexEntry::getIndexEntryString() const
+const std::vector<uint8_t> IndexEntry::getIndexEntryString() const
 {
     /*32-bit ctime seconds, the last time a file's metadata changed
     32-bit ctime nanosecond fractions
@@ -55,18 +58,23 @@ const std::vector<char> IndexEntry::getIndexEntryString() const
     32-bit uid
     32-bit gid
     32-bit file size*/
-    std::vector<char> lastcTimeMetadata = Utils::int32ToBytes(st.st_ctim.tv_sec);
-    std::vector<char> cTimeNano = Utils::int32ToBytes(st.st_ctim.tv_nsec);
-    std::vector<char> lastmTimeData = Utils::int32ToBytes(st.st_mtim.tv_sec);
-    std::vector<char> mTimeNano = Utils::int32ToBytes(st.st_mtim.tv_nsec);;
-    std::vector<char> dev = Utils::int32ToBytes(st.st_dev);
-    std::vector<char> ino = Utils::int32ToBytes(st.st_ino);
-    std::vector<char> mode = Utils::int32ToBytes(std::stoul(Utils::getMode(fileName), nullptr, 8));
-    std::vector<char> uid = Utils::int32ToBytes(st.st_uid);
-    std::vector<char> gid = Utils::int32ToBytes(st.st_gid);
-    std::vector<char> fileSize = Utils::int32ToBytes(st.st_size);
+    std::vector<uint8_t> lastcTimeMetadata = Utils::int32ToBytes(st.st_ctim.tv_sec);
+    std::vector<uint8_t> cTimeNano = Utils::int32ToBytes(st.st_ctim.tv_nsec);
+    std::vector<uint8_t> lastmTimeData = Utils::int32ToBytes(st.st_mtim.tv_sec);
+    std::vector<uint8_t> mTimeNano = Utils::int32ToBytes(st.st_mtim.tv_nsec);;
+    std::vector<uint8_t> dev = Utils::int32ToBytes(st.st_dev);
+    std::vector<uint8_t> ino = Utils::int32ToBytes(st.st_ino);
+    std::vector<uint8_t> mode = Utils::int32ToBytes(std::stoul(Utils::getMode(fileName), nullptr, 8));
+    std::vector<uint8_t> uid = Utils::int32ToBytes(st.st_uid);
+    std::vector<uint8_t> gid = Utils::int32ToBytes(st.st_gid);
+    std::vector<uint8_t> fileSize = Utils::int32ToBytes(st.st_size);
 
-    std::vector<char> result;
+    // std::cout << st.st_size << std::endl;
+    // for (auto x : fileSize)
+    //     std::cout << std::hex << (unsigned int)x << " ";
+    // std::cout << std::endl;
+
+    std::vector<uint8_t> result;
     result.insert(result.end(), lastcTimeMetadata.begin(), lastcTimeMetadata.end());
     result.insert(result.end(), cTimeNano.begin(), cTimeNano.end());
     result.insert(result.end(), lastmTimeData.begin(), lastmTimeData.end());
@@ -79,12 +87,12 @@ const std::vector<char> IndexEntry::getIndexEntryString() const
     result.insert(result.end(), fileSize.begin(), fileSize.end());
 
     // turn SHA1 into 20 bytes
-    std::vector<char> packedSHA = Utils::packStringToPackedBytes(hash);
+    std::vector<uint8_t> packedSHA = Utils::packStringToPackedBytes(hash);
     result.insert(result.end(), packedSHA.begin(), packedSHA.end());
 
     // flags
-    result.push_back(static_cast<char>((flags >> 8) & 0xff));
-    result.push_back(static_cast<char>((flags >> 0) & 0xff));
+    result.push_back(static_cast<uint8_t>((flags >> 8) & 0xff));
+    result.push_back(static_cast<uint8_t>((flags >> 0) & 0xff));
 
     // file name
     result.insert(result.end(), fileName.begin(), fileName.end());
@@ -106,7 +114,7 @@ const std::string Index::getHeader(const size_t len) const
     result += '\0';
 
     // big-Endian representation of number of entries
-    std::vector<char> lenBytes(Utils::int32ToBytes(len));
+    std::vector<uint8_t> lenBytes(Utils::int32ToBytes(len));
     result.insert(result.end(), lenBytes.begin(), lenBytes.end());
 
     return result;
@@ -116,11 +124,11 @@ void Index::prepareSerialize()
 {
     /* Might move this block of code later, because I don't want to construct a new Index again each time I add*/
 
-    std::vector<char> result;
+    std::vector<uint8_t> result;
     content.clear(); // we make sure to add all elements again, not over last ones
     for (auto e : entries)
     {
-        std::vector<char> entryString = e.second.getIndexEntryString();
+        std::vector<uint8_t> entryString = e.second.getIndexEntryString();
         content.insert(content.end(), entryString.begin(), entryString.end());
     }
     std::string header = getHeader(entries.size());
@@ -189,13 +197,13 @@ void Index::add(const std::vector<std::string>& files)
 void Index::serialize(const std::string&) const
 {
     std::string header = getHeader(entries.size());
-    std::vector<char> v;
+    std::vector<uint8_t> v;
     // header
     v.assign(header.begin(), header.end());
     // actual content
     v.insert(v.end(), content.begin(), content.end());
     // SHA1 hash
-    std::vector<char> packedHash = Utils::packStringToPackedBytes(hash);
+    std::vector<uint8_t> packedHash = Utils::packStringToPackedBytes(hash);
     v.insert(v.end(), packedHash.begin(), packedHash.end());
 
     Utils::writeBinaryFile(Git::gitDir + "/" + "index", v);
@@ -217,7 +225,7 @@ void Index::parseIndexFile()
 {
 
     entries.clear(); // flush junk data
-    std::vector<char> index = Utils::readBinaryFile(Git::gitDir + "/" + "index");
+    std::vector<uint8_t> index = Utils::readBinaryFile(Git::gitDir + "/" + "index");
     if (index.size() == 0)
         return;
     if (!checkSignature(std::string(index.begin(), index.begin() + 8)))
@@ -226,34 +234,34 @@ void Index::parseIndexFile()
         return;
     }
 
-    uint32_t entryCount = Utils::bytesToInt32(std::vector<char>(index.begin() + 8, index.begin() + 12));
+    uint32_t entryCount = Utils::bytesToInt32(std::vector<uint8_t>(index.begin() + 8, index.begin() + 12));
     
     size_t start = 12;
     for (size_t i = 0; i < entryCount; ++i)
     {
         struct stat st;
-        st.st_ctim.tv_sec = Utils::bytesToInt32(std::vector<char>(index.begin() + start, index.begin() + start + 4));
+        st.st_ctim.tv_sec = Utils::bytesToInt32(std::vector<uint8_t>(index.begin() + start, index.begin() + start + 4));
         start += 4;
-        st.st_ctim.tv_nsec = Utils::bytesToInt32(std::vector<char>(index.begin() + start, index.begin() + start + 4));
+        st.st_ctim.tv_nsec = Utils::bytesToInt32(std::vector<uint8_t>(index.begin() + start, index.begin() + start + 4));
         start += 4;
-        st.st_mtim.tv_sec = Utils::bytesToInt32(std::vector<char>(index.begin() + start, index.begin() + start + 4));
+        st.st_mtim.tv_sec = Utils::bytesToInt32(std::vector<uint8_t>(index.begin() + start, index.begin() + start + 4));
         start += 4;
-        st.st_mtim.tv_nsec = Utils::bytesToInt32(std::vector<char>(index.begin() + start, index.begin() + start + 4));
+        st.st_mtim.tv_nsec = Utils::bytesToInt32(std::vector<uint8_t>(index.begin() + start, index.begin() + start + 4));
         start += 4;
-        st.st_dev = Utils::bytesToInt32(std::vector<char>(index.begin() + start, index.begin() + start + 4));
+        st.st_dev = Utils::bytesToInt32(std::vector<uint8_t>(index.begin() + start, index.begin() + start + 4));
         start += 4;
-        st.st_ino = Utils::bytesToInt32(std::vector<char>(index.begin() + start, index.begin() + start + 4));
+        st.st_ino = Utils::bytesToInt32(std::vector<uint8_t>(index.begin() + start, index.begin() + start + 4));
         start += 4;
-        st.st_mode  = Utils::bytesToInt32(std::vector<char>(index.begin() + start, index.begin() + start + 4));
+        st.st_mode  = Utils::bytesToInt32(std::vector<uint8_t>(index.begin() + start, index.begin() + start + 4));
         start += 4;
-        st.st_uid = Utils::bytesToInt32(std::vector<char>(index.begin() + start, index.begin() + start + 4));
+        st.st_uid = Utils::bytesToInt32(std::vector<uint8_t>(index.begin() + start, index.begin() + start + 4));
         start += 4;
-        st.st_gid = Utils::bytesToInt32(std::vector<char>(index.begin() + start, index.begin() + start + 4));
+        st.st_gid = Utils::bytesToInt32(std::vector<uint8_t>(index.begin() + start, index.begin() + start + 4));
         start += 4;
-        st.st_size = Utils::bytesToInt32(std::vector<char>(index.begin() + start, index.begin() + start + 4));
+        st.st_size = Utils::bytesToInt32(std::vector<uint8_t>(index.begin() + start, index.begin() + start + 4));
         start += 4;
 
-        std::string ieHash = Utils::unpackBytesToString(std::vector<char>(index.begin() + start, index.begin() + start + 20));
+        std::string ieHash = Utils::unpackBytesToString(std::vector<uint8_t>(index.begin() + start, index.begin() + start + 20));
         start += 20;
 
         uint16_t ieFlags = (index[start] << 8) | index[start + 1];
@@ -279,12 +287,12 @@ void Index::parseIndexFile()
                 directories[currentDir].insert(ieFileName);
             currentDir += "/";
         }
-
+        // std::cout << "Loaded index file: " << ieFileName << " index size : " << st.st_size << std::endl;
     }
     
-    if (Utils::getSHA1hash(std::vector<char>(index.begin(), index.end() - 20))
+    if (Utils::getSHA1hash(std::vector<uint8_t>(index.begin(), index.end() - 20))
         != Utils::unpackBytesToString(
-            std::vector<char>(index.end() - 20, index.end())
+            std::vector<uint8_t>(index.end() - 20, index.end())
             ))
                 std::cout << "Checksum corrupt !" << std::endl;
 }
@@ -320,4 +328,32 @@ void Index::saveUpdates()
     prepareSerialize();
     serialize("");
     changed = false;
+}
+
+void Index::updateEntryStat(const std::string& path, const struct stat& st)
+{
+    entries[path].setStat(st);
+    changed = true;
+}
+
+bool Index::isTracked(const std::string& path) const
+{
+    return (entries.find(path) != entries.end()) 
+    || (directories.find(path) != directories.end());
+}
+
+bool IndexEntry::statMatch(const struct stat& st) const
+{
+    return (Utils::getModeFromStat(this->st) == 
+            Utils::getModeFromStat(st)) &&
+         (this->st.st_size == 0 ||
+           this->st.st_size == st.st_size);
+}
+
+bool IndexEntry::timesMatch(const struct stat& st) const
+{
+    return this->st.st_ctim.tv_nsec == st.st_ctim.tv_nsec &&
+    this->st.st_ctim.tv_sec == st.st_ctim.tv_sec && 
+    this->st.st_mtim.tv_nsec == st.st_mtim.tv_nsec && 
+    this->st.st_mtim.tv_sec == st.st_mtim.tv_sec;
 }

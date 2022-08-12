@@ -6,12 +6,12 @@
 #include <flatToTree.hpp>
 
 class Git
-{             
+{          
     public:
         static const std::set<std::string> ignoredDirs;
         static const std::string gitDir;
         static void run();
         static void init();
         static void commit();
-        static const Tree createCommitTree(const std::shared_ptr<Node>&);
+        static void status();
 };

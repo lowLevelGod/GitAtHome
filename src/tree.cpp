@@ -8,18 +8,18 @@ const std::string Tree::getHeader(const size_t len) const
     return "tree" + Object::getHeader(len);
 }
 
-const std::vector<char> TreeEntry::getTreeEntryString()
+const std::vector<uint8_t> TreeEntry::getTreeEntryString()
 {
     std::string prefix = "";
     prefix += mode;
     prefix += fileName;
     prefix += '\0';
 
-    std::vector<char> result;
+    std::vector<uint8_t> result;
     result.assign(prefix.begin(), prefix.end());
 
     // turn SHA1 into 20 bytes
-    std::vector<char> packedSHA = Utils::packStringToPackedBytes(hash);
+    std::vector<uint8_t> packedSHA = Utils::packStringToPackedBytes(hash);
     result.insert(result.end(), packedSHA.begin(), packedSHA.end());
     
     return result;
@@ -40,10 +40,10 @@ Tree::Tree(std::vector<TreeEntry>& entries)
     //     return first.getFileName() < second.getFileName();
     // });
 
-    std::vector<char> result;
+    std::vector<uint8_t> result;
     for (auto e : entries)
     {
-        std::vector<char> entryString = e.getTreeEntryString();
+        std::vector<uint8_t> entryString = e.getTreeEntryString();
         content.insert(content.end(), entryString.begin(), entryString.end());
     }
     std::string header = getHeader(content.size());

@@ -28,7 +28,7 @@ Commit::Commit(const Tree& tree, const CommitMessage& cm, const std::vector<std:
 
     //prepending header to content to compute sha1
     resultString = getHeader(resultString.length()) + resultString;
-    std::vector<char> result;
+    std::vector<uint8_t> result;
     result.assign(resultString.begin(), resultString.end());
     
     hash.assign(Utils::getSHA1hash(result));

@@ -12,30 +12,21 @@
 #include <dirent.h>
 #include <algorithm>
 
-const std::string Utils::getSHA1hash(const std::vector<char> &content)
+const std::string Utils::getSHA1hash(const std::vector<uint8_t> &content)
 {
-    std::string tmp;
-    tmp.assign(content.begin(), content.end());
-
-    char hex[SHA1_HEX_SIZE]; // temporary buffer for sha1 hash
-    sha1(tmp.c_str())
-        // finalize must be called, otherwise the hash is not valid
-        // after that, no more bytes should be added
-        .finalize()
-        // print the hash in hexadecimal, 0-terminated
-        .print_hex(hex);
-
-    return std::string(hex);
+    SHA1 checksum;
+    checksum.update(std::string(content.begin(), content.end()));
+    return checksum.final();
 }
 
-const std::vector<char> Utils::readBinaryFile(const std::string &fileName)
+const std::vector<uint8_t> Utils::readBinaryFile(const std::string &fileName)
 {
     if (!fileExists(fileName))
     {
         std::cout << "File: " << fileName << " does not exist!" << std::endl;
-        return std::vector<char>();
+        return std::vector<uint8_t>();
     }
-    std::vector<char> result;
+    std::vector<uint8_t> result;
     std::ifstream file(fileName, std::ios::binary);
 
     file.unsetf(std::ios::skipws); // for newlines
@@ -50,9 +41,8 @@ const std::vector<char> Utils::readBinaryFile(const std::string &fileName)
     result.reserve(fileSize);
 
     result.insert(result.begin(),
-                  std::istream_iterator<char>(file),
-                  std::istream_iterator<char>());
-
+                  std::istream_iterator<uint8_t>(file),
+                  std::istream_iterator<uint8_t>());
     // std::cerr << "Error: " << strerror(errno);
     file.close();
     // if (!file)
@@ -61,11 +51,11 @@ const std::vector<char> Utils::readBinaryFile(const std::string &fileName)
     return result;
 }
 
-const std::vector<char> Utils::decompressBytes(const std::vector<char>& compressed, const size_t len)
+const std::vector<uint8_t> Utils::decompressBytes(const std::vector<uint8_t>& compressed, const size_t len)
 {
     uLong ucompSize = len;
     uLong compSize = compressBound(compressed.size());
-    std::vector<char> decompressedResult(ucompSize); // allocate enough size for output buffer
+    std::vector<uint8_t> decompressedResult(ucompSize); // allocate enough size for output buffer
     int result = 0;
     // Inflate
     try
@@ -87,37 +77,26 @@ const std::string Utils::getMode(const std::string& fileName)
 {
     struct stat st = {0};
 
-    std::string result;
     if (stat(fileName.c_str(), &st) != -1) { // check if file exists
-        
-        std::ostringstream str;
-        str << std::oct << st.st_mode;
-        std::string result = str.str();
-
-        if (result[0] == '4')
-            return "40000";
-        else if (result.find('7') != std::string::npos)
-            return "100755";
-        else
-            return "100644";
+        return getModeFromStat(st);
     }
     // std::cout << fileName << " " << Utils::fileExists(fileName) << std::endl;
-    return result;
+    return "DOESNOTEXIST";
 }
 
-const std::vector<char> Utils::int32ToBytes(const int x)
+const std::vector<uint8_t> Utils::int32ToBytes(const int x)
 {
-    return std::vector<char>({
-        static_cast<char>((x >> 24) & 0xff),
-        static_cast<char>((x >> 16) & 0xff),
-        static_cast<char>((x >> 8) & 0xff),
-        static_cast<char>((x >> 0) & 0xff)
+    return std::vector<uint8_t>({
+        static_cast<uint8_t>((x >> 24) & 0xff),
+        static_cast<uint8_t>((x >> 16) & 0xff),
+        static_cast<uint8_t>((x >> 8) & 0xff),
+        static_cast<uint8_t>((x >> 0) & 0xff)
     });
 }
 
-const std::vector<char> Utils::packStringToPackedBytes(const std::string& s)
+const std::vector<uint8_t> Utils::packStringToPackedBytes(const std::string& s)
 {
-    std::vector<char> result;
+    std::vector<uint8_t> result;
     for (size_t i = 0, len = s.length(); i < len - 1; i += 2)
     {
         uint8_t b1 = 0, b2 = 0;
@@ -139,11 +118,11 @@ const std::vector<char> Utils::packStringToPackedBytes(const std::string& s)
     return result;
 }
 
-void Utils::writeBinaryFile(const std::string& fileName, const std::vector<char>& v)
+void Utils::writeBinaryFile(const std::string& fileName, std::vector<uint8_t>& v)
 {
     std::ofstream file(fileName, std::ios::binary);
    
-    file.write(v.data(), v.size());
+    file.write(reinterpret_cast<char*>(v.data()), v.size());
     // std::cerr << fileName << " " << "Error: " << strerror(errno);
     file.close();
     if (!file)
@@ -192,13 +171,13 @@ const std::vector<std::string> Utils::listAllFiles(const std::string& dirName)
     return files;
 }
 
-const uint32_t Utils::bytesToInt32(const std::vector<char>& v)
+const uint32_t Utils::bytesToInt32(const std::vector<uint8_t>& v)
 {
     return (v[0] << 24) | (v[1] << 16)
              | (v[2] << 8) | (v[3] << 0);
 }
 
-const std::string Utils::unpackBytesToString(const std::vector<char>& v)
+const std::string Utils::unpackBytesToString(const std::vector<uint8_t>& v)
 {
     const std::string hexChars = "0123456789abcdef";
     std::string result = "";
@@ -236,14 +215,14 @@ const std::vector<std::string> Utils::splitPath(std::string path)
 
 const std::shared_ptr<Object> Utils::parseObjectFile(const std::string& path)
 {
-    std::vector<char> file = Utils::readBinaryFile(path);
+    std::vector<uint8_t> file = Utils::readBinaryFile(path);
     // 30 characters should be enough to get actual size of object
-    std::vector<char> header = Utils::decompressBytes(file, 30);
+    std::vector<uint8_t> header = Utils::decompressBytes(file, 30);
 
-    std::vector<char>::iterator firstSpace = std::find(header.begin(), header.end(), ' ');
+    std::vector<uint8_t>::iterator firstSpace = std::find(header.begin(), header.end(), ' ');
 
     std::string objectType(header.begin(), firstSpace);
-    std::vector<char>::iterator firstNull = std::find(firstSpace, header.end(), '\0');
+    std::vector<uint8_t>::iterator firstNull = std::find(firstSpace, header.end(), '\0');
     // std::cout << "File : " << path << std::endl;
     // for (auto x : header)
     //     std::cout << x;
@@ -273,7 +252,7 @@ const std::shared_ptr<Object> Utils::parseObjectFile(const std::string& path)
     return nullptr;
 }
 
-const std::shared_ptr<Blob> Utils::parseBlob(const std::vector<char>& file)
+const std::shared_ptr<Blob> Utils::parseBlob(const std::vector<uint8_t>& file)
 {
     // for (auto x : file)
     //     std::cout << x;
@@ -282,7 +261,7 @@ const std::shared_ptr<Blob> Utils::parseBlob(const std::vector<char>& file)
     return std::make_shared<Blob>(file);
 }
 
-const std::shared_ptr<Tree> Utils::parseTree(const std::vector<char>& file)
+const std::shared_ptr<Tree> Utils::parseTree(const std::vector<uint8_t>& file)
 {
     // std::cout << "Size: " << file.size() << std::endl;
     std::vector<TreeEntry> entries;
@@ -313,7 +292,7 @@ const std::shared_ptr<Tree> Utils::parseTree(const std::vector<char>& file)
         ++i;
 
         std::string fileHash = "";
-        for (auto x : unpackBytesToString(std::vector<char>(
+        for (auto x : unpackBytesToString(std::vector<uint8_t>(
             file.begin() + i, 
             file.begin() + i + 20
             )))
@@ -332,7 +311,7 @@ const std::shared_ptr<Tree> Utils::parseTree(const std::vector<char>& file)
     return std::make_shared<Tree>(entries);
 }
 
-const std::shared_ptr<Commit> Utils::parseCommit(const std::vector<char>& file)
+const std::shared_ptr<Commit> Utils::parseCommit(const std::vector<uint8_t>& file)
 {
     // for (auto x : file)
     //     std::cout << x;
@@ -355,4 +334,70 @@ const std::string Utils::getPathFromHash(const std::string& hash)
     }
 
     return Git::gitDir + "/" + "objects" + "/" + hash.substr(0, 2) + "/" + hash.substr(2);
+}
+
+const std::map<std::string, struct stat> Utils::getStatsInDir(const std::string& dirName)
+{
+    std::map<std::string, struct stat> stats;
+    // std::cout << "Traversing : " << dirName << std::endl;
+    DIR *dir;
+    struct dirent *ent;
+    if ((dir = opendir(dirName.c_str())) != NULL)
+    {
+        while ((ent = readdir(dir)) != NULL)
+        {
+            if (Git::ignoredDirs.find(std::string(ent->d_name)) == Git::ignoredDirs.end())
+            {
+                struct stat st = {0};
+                std::string fullPath = "";
+                if (dirName != ".")
+                    fullPath += (dirName + '/');
+                fullPath += std::string(ent->d_name);
+                if (stat(fullPath.c_str(), &st) != -1)
+                {
+                    stats.insert({
+                        fullPath,
+                        st
+                        });
+                }else
+                {
+                    // std::cout << fullPath << " ";
+                    std::cout << "File does not exist!" << std::endl;
+                }
+            }
+        }
+        closedir(dir);
+    }
+    else
+    {
+        /* could not open directory */
+        perror("");
+    }
+
+    return stats;
+}
+
+bool Utils::isDir(const std::string& path)
+{
+    struct stat st = {0};
+
+    if (stat(path.c_str(), &st) != -1)
+        return (st.st_mode & S_IFDIR);
+    
+    return false;
+}
+
+const std::string Utils::getModeFromStat(const struct stat& st)
+{
+    std::ostringstream str;
+    str << std::oct << st.st_mode;
+    std::string result = str.str();
+
+    if (result[0] == '4')
+        return "40000";
+    else if (result.find('7') != std::string::npos)
+        return "100755";
+    else
+        return "100644";
+    return "UNKOWN";
 }

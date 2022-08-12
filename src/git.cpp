@@ -12,8 +12,9 @@
 #include <../headers/index.hpp>
 #include <fcntl.h>
 #include <../headers/flatToTree.hpp>
+#include <../headers/workspace.hpp>
 
-const std::set<std::string> Git::ignoredDirs = {".", "..", ".git", ".gitAtHome", "webserver", "build"};
+const std::set<std::string> Git::ignoredDirs = {".", "..", ".git", ".gitAtHome", "build", "webserver"};
 const std::string Git::gitDir = "./.gitAtHome";
 
 void Git::init()
@@ -43,7 +44,7 @@ void Git::commit()
     ftree.insert(index.getFilePaths());
 
     Commit curCommit(
-        Git::createCommitTree(ftree.getRoot()),
+        ftree.createCommitTree(ftree.getRoot()),
         CommitMessage("lowLevelGod", "lowLevelGod", "initial commit !"),
         parents);
     
@@ -59,49 +60,42 @@ void Git::commit()
     Ref::updateHead(curCommit.getHash());
 }
 
-const Tree Git::createCommitTree(const std::shared_ptr<Node>& currentNode)
+void Git::status()
 {
-    std::vector<TreeEntry> treeEntries;
-    for (auto child : currentNode->children)
-    {
-        std::string absolutePath = "";
-        if (currentNode->name != "")
-            absolutePath = currentNode->name + "/";
-        absolutePath += child->name;
-        // std::cout << child->name << std::endl;
-        if (child->children.empty()) // if it has no children, then it's a blob
-        {
-            treeEntries.push_back(TreeEntry(
-                absolutePath,
-                Blob(absolutePath)
-            ));
-        }else // it's a tree
-        {
-            treeEntries.push_back(TreeEntry(
-                absolutePath,
-                Tree(createCommitTree(child))
-            ));
-        }
-    }
+    Workspace workspace; // this also loads index
 
-    Tree tempTree(treeEntries);
-    tempTree.serialize("");
+    std::set<std::string> untracked = workspace.searchUntracked(".");
+    workspace.detectWorkspaceChanges();
+    std::map<std::string, Workspace_status> changedFiles = workspace.getChangedFiles();
 
-    return tempTree;
+    workspace.saveIndex();
+
+    for (auto x : untracked)
+        std::cout << "?? " << x << std::endl;
+    for (auto x : changedFiles)
+        std::cout << workspace.workspaceStatusToString(x.second) + " " + x.first << std::endl;
+    
 }
 
 void Git::run()
 {
     init();
-    Index index;
-    index.add(Utils::listAllFiles("."));
-    index.saveUpdates();
+    // Blob blob("test.txt");
+    // std::cout << blob.getHash() << std::endl;
+    // std::cout << Utils::getSHA1hash(std::vector<uint8_t>({'b','l','o','b',' ', '1','4','H','e','l','l','o',',',' ', 'W','o','r','l','d','5'})) << std::endl;
+    // Index index;
+    // index.add(Utils::listAllFiles("."));
+    // index.saveUpdates();
+    Git::status();
+    // Index index;
+    // index.add(Utils::listAllFiles("."));
+    // index.saveUpdates();
     // FlatToTree ftree;
     // ftree.insert(Utils::listAllFiles("src"));
     // Tree tree = Git::createCommitTree(ftree.getRoot());
     // for (auto path : Utils::listAllFiles(gitDir + '/' + "objects"))
     //     Utils::parseObjectFile(path);
-    Git::commit();
+    // Git::commit();
     // Index index;
     // index.add(std::vector<std::string>({
     //     "test.txt"

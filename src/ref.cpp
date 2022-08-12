@@ -5,7 +5,7 @@
 
 void Ref::updateHead(const std::string& commitHash)
 {
-    std::vector<char> v;
+    std::vector<uint8_t> v;
     v.assign(commitHash.begin(), commitHash.end());
     
     Utils::writeBinaryFile(".gitAtHome/HEAD", v);
@@ -14,7 +14,7 @@ void Ref::updateHead(const std::string& commitHash)
 const std::string Ref::getHead()
 {
     std::string result;
-    std::vector<char> temp = Utils::readBinaryFile(".gitAtHome/HEAD");
+    std::vector<uint8_t> temp = Utils::readBinaryFile(".gitAtHome/HEAD");
     result.assign(temp.begin(), temp.end());
 
     return result;

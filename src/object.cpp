@@ -24,12 +24,12 @@ void Object::serialize(const std::string& header) const
         return;
     }
     // append blob content to header
-    std::vector<char> result(header.begin(), header.end());
+    std::vector<uint8_t> result(header.begin(), header.end());
     result.insert(result.end(), content.begin(), content.end());
 
     uLong ucompSize = result.size() + 1;
     uLong compSize = compressBound(ucompSize);
-    std::vector<char> compressedResult(compSize); // allocate enough size for output buffer
+    std::vector<uint8_t> compressedResult(compSize); // allocate enough size for output buffer
     // Deflate
     try
     {

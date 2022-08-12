@@ -22,16 +22,17 @@ Blob::Blob(const std::string& fileName)
     // create header
     std::string header = getHeader(content.size());
 
+        // std::cout<<header;
     // compute SHA1 hash of header + content 
-    std::vector<char> hashedContent(header.begin(), header.end());
+    std::vector<uint8_t> hashedContent(header.begin(), header.end());
     hashedContent.insert(hashedContent.end(), content.begin(), content.end());
     hash.assign(Utils::getSHA1hash(hashedContent));
 }
 
-Blob::Blob(const std::vector<char>& content) : Object(content)
+Blob::Blob(const std::vector<uint8_t>& content) : Object(content)
 {
     std::string header = "blob " + std::to_string(content.size()) + '\0';
-    std::vector<char> result(header.begin(), header.end());
+    std::vector<uint8_t> result(header.begin(), header.end());
     result.insert(result.end(), content.begin(), content.end());
     hash = Utils::getSHA1hash(result);
 }

@@ -20,6 +20,7 @@ class FlatToTree
     private:
         std::shared_ptr<Node> root;
     public:
+        const Tree createCommitTree(const std::shared_ptr<Node>&);   
         void insert(const std::vector<std::string>&);
         void dfs(const std::shared_ptr<Node>&);
         void bfs(const std::shared_ptr<Node>&);
