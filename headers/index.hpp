@@ -53,6 +53,7 @@ class Index : public Object
         void saveUpdates();
         const std::vector<std::string> getFilePaths();
         const std::vector<IndexEntry> getEntries();
+        bool isTrackedFile(const std::string&) const;
         bool isTracked(const std::string&) const;
         void updateEntryStat(const std::string&, const struct stat&);
         Index();

@@ -1,4 +1,5 @@
 #include <../headers/workspace.hpp>
+#include <../headers/ref.hpp>
 #include <iostream>
 
 const std::set<std::string> Workspace::searchUntracked(const std::string& dirName)
@@ -58,23 +59,32 @@ bool Workspace::trackableFile(const std::string& path)
     return false;
 }
 
-void Workspace::detectWorkspaceChanges()
+void Workspace::detectChanges()
 {
     for (auto entry : index.getEntries())
-        checkIndexEntry(entry);
+    {
+        checkIndexEntryWorkspace(entry);
+        checkIndexEntryHEAD(entry);
+    }
 }
 
-void Workspace::checkIndexEntry(const IndexEntry& entry)
+void Workspace::checkIndexEntryWorkspace(const IndexEntry& entry)
 {
     if (stats.find(entry.getFileName()) == stats.end())
     {
-        changedFiles.insert({entry.getFileName(), WORKSPACE_DELETED});
+        if (changedFiles.find(entry.getFileName()) == changedFiles.end())
+            changedFiles.insert({entry.getFileName(), std::to_string(WORKSPACE_DELETED)});
+        else
+            changedFiles[entry.getFileName()] += std::to_string(WORKSPACE_DELETED);
         return;
     }
     bool statCheck = entry.statMatch(stats[entry.getFileName()]);
     if (!statCheck)
     {
-        changedFiles.insert({entry.getFileName(), WORKSPACE_MODIFIED});
+        if (changedFiles.find(entry.getFileName()) == changedFiles.end())
+            changedFiles.insert({entry.getFileName(), std::to_string(WORKSPACE_MODIFIED)});
+        else
+            changedFiles[entry.getFileName()] += std::to_string(WORKSPACE_MODIFIED);
         return;
     }
 
@@ -85,7 +95,10 @@ void Workspace::checkIndexEntry(const IndexEntry& entry)
     Blob blob(entry.getFileName());
     if (blob.getHash() != entry.getHash())
     {
-        changedFiles.insert({entry.getFileName(), WORKSPACE_MODIFIED});
+        if (changedFiles.find(entry.getFileName()) == changedFiles.end())
+            changedFiles.insert({entry.getFileName(), std::to_string(WORKSPACE_MODIFIED)});
+        else
+            changedFiles[entry.getFileName()] += std::to_string(WORKSPACE_MODIFIED);
         return;
     }else
     {
@@ -94,11 +107,52 @@ void Workspace::checkIndexEntry(const IndexEntry& entry)
     }
 }
 
-const std::string Workspace::workspaceStatusToString(const Workspace_status& s)
+void Workspace::checkIndexEntryHEAD(const IndexEntry& entry)
 {
-    if (s == WORKSPACE_MODIFIED)
-        return " M";
-    if (s == WORKSPACE_DELETED)
-        return " D";
-    return "  ";    
+    if (Ref::headEntries.find(entry.getFileName()) == Ref::headEntries.end())
+    {
+        if (changedFiles.find(entry.getFileName()) == changedFiles.end())
+            changedFiles.insert({entry.getFileName(), std::to_string(INDEX_ADDED)});
+        else
+            changedFiles[entry.getFileName()] += std::to_string(INDEX_ADDED);
+    }else
+    {
+        if (entry.getMode() != Ref::headEntries[entry.getFileName()].getMode() ||
+        entry.getHash() != Ref::headEntries[entry.getFileName()].getHash())
+        {
+            if (changedFiles.find(entry.getFileName()) == changedFiles.end())
+                changedFiles.insert({entry.getFileName(), std::to_string(INDEX_MODIFIED)});
+            else
+                changedFiles[entry.getFileName()] += std::to_string(INDEX_MODIFIED);
+        }
+
+    }
+}
+
+void Workspace::collectDeletedHeadFiles()
+{
+    for (auto x : Ref::headEntries)
+        if (!index.isTrackedFile(x.first))
+        {
+            if (changedFiles.find(x.first) == changedFiles.end())
+                changedFiles.insert({x.first, std::to_string(INDEX_DELETED)});
+            else
+                changedFiles[x.first] += std::to_string(INDEX_DELETED);
+        }
+
+}
+
+const std::string Workspace::workspaceStatusToString(const std::string& path)
+{
+    std::string status = changedFiles[path];
+    std::string left = " ";
+    left = status.find(std::to_string(INDEX_ADDED)) != std::string::npos ? "A" : left;
+    left = status.find(std::to_string(INDEX_MODIFIED)) != std::string::npos ? "M" : left;
+    left = status.find(std::to_string(INDEX_DELETED)) != std::string::npos ? "D" : left;
+
+    std::string right = " ";
+    right = status.find(std::to_string(WORKSPACE_DELETED)) != std::string::npos ? "D" : right;
+    right = status.find(std::to_string(WORKSPACE_MODIFIED)) != std::string::npos ? "M" : right;
+
+    return left + right;    
 }

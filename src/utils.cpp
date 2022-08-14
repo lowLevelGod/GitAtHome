@@ -1,5 +1,6 @@
 #include <../headers/utils.hpp>
 #include <../headers/git.hpp>
+#include <../headers/ref.hpp>
 #include <sha1.hpp>
 #include <iostream>
 #include <fstream>
@@ -236,7 +237,8 @@ const std::shared_ptr<Object> Utils::parseObjectFile(const std::string& path)
     {
         return Utils::parseTree(std::vector(
             std::find(file.begin(), file.end(), '\0') + 1, file.end()
-            ));
+            )
+            );
     }else if (objectType == "commit")
     {
         return Utils::parseCommit(std::vector(
@@ -282,13 +284,14 @@ const std::shared_ptr<Tree> Utils::parseTree(const std::vector<uint8_t>& file)
         }
         i += fmodemax;
 
-        std::cout << fileMode << " ";
+        // std::cout << fileMode << " ";
 
         std::string fileName = "";
         for (; file[i] != '\0'; ++i)
             fileName += file[i];
 
-        std::cout << (Utils::splitPath(fileName).end() - 1)[0] << " ";
+        // std::cout << (Utils::splitPath(fileName).end() - 1)[0] << " ";
+        // std::cout << fileName << std::endl;
         ++i;
 
         std::string fileHash = "";
@@ -297,14 +300,17 @@ const std::shared_ptr<Tree> Utils::parseTree(const std::vector<uint8_t>& file)
             file.begin() + i + 20
             )))
                 fileHash += x;
-        std::cout << fileHash << std::endl;
+        // std::cout << fileHash << std::endl;
         i += 19;
 
         entries.push_back(TreeEntry(fileMode, fileName, fileHash));
-        // if (fileMode[0] == '4')
-        // {
+        if (fileMode[0] == '4')
+        {
             parseObjectFile(Utils::getPathFromHash(fileHash));
-        // }
+        }else
+        {
+            Ref::headEntries.insert({fileName, TreeEntry(fileMode, fileName, fileHash)});
+        }
         // std::cout << i << std::endl;
     }
     
@@ -320,9 +326,9 @@ const std::shared_ptr<Commit> Utils::parseCommit(const std::vector<uint8_t>& fil
     std::string treeHash(file.begin() + 5, file.begin() + 5 + 40);
     // std::cout << treeHash << std::endl;
 
-    parseObjectFile(Utils::getPathFromHash(treeHash));
+    std::shared_ptr<Tree> tree = std::dynamic_pointer_cast<Tree>(parseObjectFile(Utils::getPathFromHash(treeHash)));
 
-    return nullptr;
+    return std::make_shared<Commit>(tree); // for now just tree
 }
 
 const std::string Utils::getPathFromHash(const std::string& hash) 

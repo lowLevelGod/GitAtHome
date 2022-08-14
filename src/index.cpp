@@ -336,9 +336,14 @@ void Index::updateEntryStat(const std::string& path, const struct stat& st)
     changed = true;
 }
 
+bool Index::isTrackedFile(const std::string& path) const
+{
+    return (entries.find(path) != entries.end());
+}
+
 bool Index::isTracked(const std::string& path) const
 {
-    return (entries.find(path) != entries.end()) 
+    return isTrackedFile(path)
     || (directories.find(path) != directories.end());
 }
 

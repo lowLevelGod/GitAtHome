@@ -64,16 +64,30 @@ void Git::status()
 {
     Workspace workspace; // this also loads index
 
-    std::set<std::string> untracked = workspace.searchUntracked(".");
-    workspace.detectWorkspaceChanges();
-    std::map<std::string, Workspace_status> changedFiles = workspace.getChangedFiles();
 
+    std::shared_ptr<Commit> headCommit;
+    if (Ref::getHead() != "")
+        headCommit = std::dynamic_pointer_cast<Commit>(
+            Utils::parseObjectFile(
+                Utils::getPathFromHash(
+                    Ref::getHead()
+                    )
+            )
+            );
+
+    // for (auto x : Ref::headEntries)
+    //     std::cout << x.first << std::endl;
+    std::set<std::string> untracked = workspace.searchUntracked(".");
+    workspace.detectChanges();
+    workspace.collectDeletedHeadFiles();
+    std::map<std::string, std::string> changedFiles = workspace.getChangedFiles();
+    
     workspace.saveIndex();
 
     for (auto x : untracked)
         std::cout << "?? " << x << std::endl;
     for (auto x : changedFiles)
-        std::cout << workspace.workspaceStatusToString(x.second) + " " + x.first << std::endl;
+        std::cout << workspace.workspaceStatusToString(x.first) + " " + x.first << std::endl;
     
 }
 
@@ -84,8 +98,12 @@ void Git::run()
     // std::cout << blob.getHash() << std::endl;
     // std::cout << Utils::getSHA1hash(std::vector<uint8_t>({'b','l','o','b',' ', '1','4','H','e','l','l','o',',',' ', 'W','o','r','l','d','5'})) << std::endl;
     // Index index;
-    // index.add(Utils::listAllFiles("."));
+    // index.add(std::vector<std::string>({
+    //     "headers/tree.hpp"
+    //     }));
+    // index.add(Utils::listAllFiles("headers/blob.hpp"));
     // index.saveUpdates();
+    // Git::commit();
     Git::status();
     // Index index;
     // index.add(Utils::listAllFiles("."));

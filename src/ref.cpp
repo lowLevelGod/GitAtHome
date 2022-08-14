@@ -3,6 +3,8 @@
 #include <fstream>
 #include <iostream>
 
+std::map<std::string, TreeEntry> Ref::headEntries;
+
 void Ref::updateHead(const std::string& commitHash)
 {
     std::vector<uint8_t> v;

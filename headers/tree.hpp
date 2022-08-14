@@ -10,8 +10,13 @@ class TreeEntry
         std::string fileName;
         std::string hash;
     public:
+        const std::string& getMode() const { return mode;}
+        const std::string& getHash() const { return hash;}
         const std::vector<uint8_t> getTreeEntryString();
         const std::string& getFileName() const{ return fileName;}
+        TreeEntry() = default;
+        TreeEntry(const TreeEntry& t)
+         : mode(t.mode), fileName(t.fileName), hash(t.hash) {} 
         TreeEntry(const std::string&, const Object&);
         TreeEntry(const std::string& mode, const std::string& fileName, const std::string& hash) 
         : mode(mode), fileName(fileName), hash(hash) {}
